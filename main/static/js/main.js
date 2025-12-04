@@ -1,5 +1,6 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getDatabase, ref, onValue, set, get, update, remove } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+import { initializeGameState } from './game.js';
 
 const firebaseConfig = {
     apiKey: "AIzaSyB1QFZFfNnT0bjJQ9CRufC3P9T2LLT8QI0",
@@ -77,35 +78,35 @@ function createOrJoin() {
     }
 }
 
-let originalMessageContent = null;
 let messageTimeout = null;
 
-function showMessage(message, duration) {
-    const messageElement = document.getElementById('errors');
-
-    if (!messageElement) {
-        console.error('Element not found');
-        return;
-    }
+function showMessage(message, messageType, duration) {
+    const messageElement = document.getElementById('messageNotif');
 
     if (messageTimeout) {
         clearTimeout(messageTimeout);
-    }
-
-    if (originalMessageContent === null) {
-        originalMessageContent = messageElement.textContent;
-    }
-
-    messageElement.textContent = message;
-    const durationMilliseconds = duration * 1000;
-
-    messageTimeout = setTimeout(() => {
-        if (originalMessageContent !== null) {
-            messageElement.textContent = originalMessageContent;
-        }
-        originalMessageContent = null;
         messageTimeout = null;
-    }, durationMilliseconds)
+    }
+
+    if(messageElement) {
+        if (messageType === 0) { // 0 = error, 1 = success
+            messageElement.classList.remove('hidden');
+            messageElement.textContent = message;
+            messageElement.style.backgroundColor = '#d03737ff';
+        }
+
+        if (messageType === 1) {
+            messageElement.classList.remove('hidden');
+            messageElement.textContent = message;
+            messageElement.style.backgroundColor = '#4CAF50';
+        }
+
+        const durationSeconds = duration * 1000;
+
+        messageTimeout = setTimeout(() => {
+            messageElement.classList.add('hidden');
+        }, durationSeconds);
+    }
 }
 
 // for handling real time changes n stuff idk
@@ -218,6 +219,13 @@ function listenToPartyChanges(partyCode) {
         try {
             if(snapshot.exists()) {
                 const partyData = snapshot.val();
+
+                if (partyData.status === 1) {
+                    console.log('Party started, redirecting to game...');
+                    window.location.href = `/game/${partyCode}/`;
+                    return;
+                }
+                
                 await populatePartyLobby(partyCode, partyData);
             } else {
                 console.log('something went wrong');
@@ -317,6 +325,7 @@ async function loadUser() {
             PLAYER.uuid = userData.uuid;
             PLAYER.username = userData.username;
             
+            showMessage(`Welcome back, ${userData.username}`, 1, 6);
             console.log('You exist! Sugoi!');
             console.log('Username:', PLAYER.username, 'UUID:', PLAYER.uuid);
             return PLAYER;
@@ -335,7 +344,14 @@ async function setUsername() {
     const usernameInput = document.getElementById('username-input');
     const formattedName = usernameInput.value.trim();
 
+    if (!formattedName) {
+        showMessage(`You didn't type anything.`, 0, 4);
+        console.log('bro entered nun');
+        return;
+    }
+
     if (formattedName.length < 3) {
+        showMessage('Username must be at least 3 characters long.', 0, 4);
         console.log('Username must be at least 3 characters long.');
         return;
     }
@@ -350,9 +366,11 @@ async function setUsername() {
         
         if (snapshot.exists()) {
             await update(userRef, userData);
+            showMessage(`Your are now: ${userData.username}.`, 1, 4);
             console.log('Username with UUID {} updated successfully.'.replace("{}", PLAYER_UUID));
         } else {
             await set(userRef, userData);
+            showMessage(`Pleased to meet you, ${userData.username}.`, 1, 4);
             console.log('User created successfully.');
         }
 
@@ -360,6 +378,7 @@ async function setUsername() {
         clearUsernameCache(PLAYER_UUID);
 
     } catch (error) {
+        showMessage('Could not set username.', 0, 4);
         console.error('Error setting username:', error);
     }
 }
@@ -407,13 +426,11 @@ function listenToUsername(uuid, callback) {
 
 export function stopAllUsernameListeners() {
     for (const uuid in activeListeners) {
-        // The stored item is an object, the unsubscribe function is under the 'callback' key
         if (activeListeners[uuid].callback) {
-            // Call the Firebase 'off' function using the stored unsubscribe function/reference
             off(activeListeners[uuid].ref, activeListeners[uuid].callback); 
         }
     }
-    // Clear the tracking object
+
     Object.keys(activeListeners).forEach(key => delete activeListeners[key]);
 }
 
@@ -434,13 +451,13 @@ async function createParty() { // it create a party lol
     const host = await loadUser();
 
     if (!host || !host.username) {
-        showMessage(`Set your nickname first.`, 4);
+        showMessage(`Set your nickname first.`, 0, 4);
         console.log('Set your nickname first.');
         return;
     }
 
     if (!partyName || partyName.length < 3) {
-        showMessage(`Party name must have more than 3 characters.`, 4);
+        showMessage(`Party name must have more than 3 characters.`, 0, 4);
         console.log('Party name must be more than 3 characters.');
         return;
     }
@@ -455,7 +472,7 @@ async function createParty() { // it create a party lol
             const isInParty = party.members.some(m => m.id === host.uuid);
 
             if (isInParty) {
-                showMessage(`You're in a party already, dude.`, 4);
+                showMessage(`You're in a party already, dude.`, 0, 4);
                 console.log('cant create a new party if u are in one already gng');
                 return;
             }
@@ -471,6 +488,7 @@ async function createParty() { // it create a party lol
             partyCode: partyCode,
             hostUUID: host.uuid,
             playerCount: playerCount,
+            status: 0, // 0 = waiting, 1 = in progress
             members: [{
                 id: host.uuid,
                 isHost: true
@@ -478,19 +496,19 @@ async function createParty() { // it create a party lol
         };
 
         await set(partyRef, partyData);
-        showMessage(`Party successfully created`, 4);
+        showMessage(`Party successfully created`, 1, 4);
         console.log('Party successfully created.', partyData);
         await renderPartyLobby();
 
     } catch (error) {
-        console.error('Could not create party because no.')
+        showMessage('Could not create party.', 0, 4);
+        console.error('Could not create party because no.', error);
     }
 }
 
 async function joinParty(codeParam) {
     const codeInput = document.getElementById('join-code-input');
     
-    // 1. Determine party code source safely (Handles list button vs. input field)
     let partyCode;
     if (typeof codeParam === 'string' && codeParam.length > 0) {
         partyCode = codeParam;
@@ -504,13 +522,13 @@ async function joinParty(codeParam) {
     const member = await loadUser();
 
     if (!member || !member.username) {
-        showMessage('Set your nickname first.', 4);
+        showMessage('Set your nickname first.', 0, 4);
         console.log('Set your nickname first.');
         return;
     }
 
     if (!finalPartyCode) {
-        showMessage('Please enter a party code.', 4);
+        showMessage('Please enter a party code.', 0, 4);
         console.log('Please enter a party code.');
         return;
     }
@@ -521,45 +539,37 @@ async function joinParty(codeParam) {
         const snapshot = await get(partyRef);
 
         if (!snapshot.exists()) {
-            showMessage('The party with that code does not exist.', 4);
+            showMessage('The party with that code does not exist.', 0, 4);
             console.log('the party with that code does not exist');
             return;
         }
 
         const partyData = snapshot.val();
-        
-        // --- FIX 1 & 2: SAFELY DEFINE THE MEMBERS ARRAY ---
-        // This ensures currentMembers is always an array, even if partyData.members is undefined/null
         const currentMembers = partyData.members || []; 
-
-        // Use the safe array for checks
         const isAlreadyMember = currentMembers.some(m => m.id === member.uuid);
 
         if (isAlreadyMember) {
-            showMessage("You're in that party already.", 4);
+            showMessage("You're in that party already.", 0, 4);
             console.log('boi u in dat party already');
             return;
         }
 
-        // Use the safe array for capacity check
         if (currentMembers.length >= partyData.playerCount) {
-            showMessage('That party is full.', 4);
+            showMessage('That party is full.', 0, 4);
             console.log('that party is full');
             return;
         }
 
-        // --- FIX 3: ADD NEW MEMBER USING THE SAFE ARRAY ---
         const newMember = { id: member.uuid, isHost: false };
-        // Spread the safe array and add the new member
         const updateMemberList = [...currentMembers, newMember]; 
 
         await update(partyRef, { members: updateMemberList }); // replaces the 'members' key with the full, updated array
         
-        showMessage(`You have joined ${finalPartyCode}`, 4);
+        showMessage(`You have joined ${partyData.partyName}.`, 1, 4);
         await renderPartyLobby(); 
 
     } catch (error) {
-        showMessage('Could not join that party because no.', 4);
+        showMessage('Could not join that party.', 0, 4);
         console.error('Error joining party:', error);
     }
 }
@@ -586,7 +596,7 @@ async function leaveParty() {
                     
                     if (updatedMembers.length === 0) {
                         await remove(partyRef);
-                        showMessage(`You have left. Party was deleted due to no members.`, 4);
+                        showMessage(`You have left; party has been deleted.`, 0, 4);
                         console.log('Party deleted (last person left)');
                     } else if (party.hostUUID === PLAYER_UUID) {
                         const newHost = updatedMembers[0];
@@ -596,13 +606,13 @@ async function leaveParty() {
                             members: updatedMembers,
                             hostUUID: newHost.id
                         });
-                        showMessage(`You have left. Host has been transferred.`, 4);
+                        showMessage(`You have left. Host has been transferred.`, 0, 4);
                         console.log('Left party and transferred host');
                     } else {
                         await update(partyRef, {
                             members: updatedMembers
                         });
-                        showMessage(`You have left.`, 4);
+                        showMessage(`You have left.`, 0, 4);
                         console.log('Left party');
                     }
                     
@@ -615,10 +625,75 @@ async function leaveParty() {
         console.log('User not in any party');
         
     } catch (error) {
+        showMessage('Could not leave party.', 0, 4);
         console.error('Error leaving party:', error);
     }
 }
 
+async function startParty() {
+    try {
+        const partiesRef = ref(database, 'parties');
+        const snapshot = await get(partiesRef);
+
+        if (!snapshot.exists()) {
+            showMessage('No parties found.', 0, 4);
+            return;
+        }
+
+        const allParties = snapshot.val();
+        let hostParty = null;
+        let hostPartyCode = null;
+
+        for (const [code, party] of Object.entries(allParties)) {
+            if (party.hostUUID === PLAYER_UUID) {
+                hostParty = party;
+                hostPartyCode = code;
+                break;
+            }
+        }
+
+        if (!hostParty) {
+            showMessage('You are not the host of any party.', 0, 4);
+            console.log('User is not a host');
+            return;
+        }
+
+        if (hostParty.status === 1) {
+            showMessage('That party has already started.', 0, 4);
+            console.log('Party already started');
+            return;
+        }
+
+        if (hostParty.status === 2) {
+            showMessage('That party has already finished.', 0, 4);
+            console.log('Party already finished');
+            return;
+        }
+
+        const playerCount = hostParty.members ? hostParty.members.length : 0;
+        if (playerCount < 2) {
+            showMessage('Need at least 2 players to start!', 0, 4);
+            console.log('Not enough players');
+            return;
+        }
+
+        const partyRef = ref(database, `parties/${hostPartyCode}`);
+        await update(partyRef, {
+            status: 1, // in progress
+            startedAt: Date.now(),
+            game: initializeGameState(hostParty.members) // Initialize game state
+        });
+
+        showMessage('Party started!', 1, 4);
+        console.log('Party started!');
+
+        window.location.href = `/game/${hostPartyCode}/`;
+
+    } catch (error) {
+        showMessage('Could not start party.', 0, 4);
+        console.error('Error starting party:', error);
+    }
+}
 
 // FOR RESCALING PURPOSES. DO NOT TOUCH. EVER.
 
@@ -675,6 +750,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const leavePartyButton = document.getElementById('leave-party-btn');
     leavePartyButton.addEventListener('click', () => {
         leaveParty();
+    });
+
+    const startGameButton = document.getElementById('start-game-btn');
+    startGameButton.addEventListener('click', () => {
+        startParty();
     });
 
     const setUsernameButton = document.getElementById('create-user-btn');

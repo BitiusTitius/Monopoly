@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.http import JsonResponse, HttpRequest, HttpResponse
 import json
 import uuid
@@ -20,5 +20,11 @@ def home_view(request):
     return response
 
 # generates a 6-character party code
-def generatePartyCode():
-    chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
+def game_view(request, party_code):
+    player_uuid = request.COOKIES.get('player_uuid')
+    if not player_uuid:
+        return redirect('home')
+    return render(request, 'game.html', {
+        'party_code': party_code,
+        'player_uuid': player_uuid
+    })

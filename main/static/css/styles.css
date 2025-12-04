@@ -14,6 +14,7 @@ html {
 }
 
 body {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
     overflow: hidden;
     display: flex;
     align-items: center;
@@ -34,11 +35,13 @@ body {
     gap: var(--standard-gap);
 }
 
-.title, .errors {
+.title, .message {
     width: fit-content;
     height: var(--standard-height);
     border-radius: var(--standard-height);
     background-color: rgb(197, 169, 169);
+    color: white;
+    font-weight: bold;
     margin-bottom: var(--standard-gap);
     transition: margin-bottom 0.3s ease-out;
     padding: 0 var(--standard-gap);
@@ -68,7 +71,7 @@ body {
     display: block; 
 }
 
-#party-list-menu {
+.party-list-menu {
     height: 100%;
     display: flex;
     flex-direction: column;
@@ -126,23 +129,17 @@ body {
     gap: var(--standard-gap);
     display: flex;
     align-items: flex-start;
-    background-color: #d3718b; 
-    text-align: center;
-    cursor: pointer;
-    font-size: 0.9em;
-    overflow: hidden;
     transition: background-color 0.2s ease;
 }
 
 .join-field {
-    flex-grow: 1;
-    min-width: 0;
-    padding: 8px;
-    border: none;
-    font-size: 1em;
-    border-radius: var(--standard-height);
+    width: 100%;
     height: var(--standard-height);
+    border-radius: var(--standard-border-radius);
+    padding: 0 15px;
+    border: none;
     box-sizing: border-box;
+    color: black;
 }
 
 .join-field:hover {
@@ -151,7 +148,7 @@ body {
 }
 
 .lovely-buttons {
-    width: 150px;
+    width: 160px;
     overflow: hidden;
     white-space: nowrap;
 }
@@ -168,7 +165,7 @@ body {
     width: 100%;
 }
 
-.party-btn:hover, .join-btn:hover {
+.party-btn:hover, .join-btn:hover, .username-input:hover {
     background-color: rgba(255, 255, 255, 0.774);
     transition: background-color 0.2s, opacity 0.2s;
 }
@@ -182,7 +179,7 @@ body {
     border: none;
     cursor: pointer;
     height: var(--standard-height);
-    border-radius: var(--standard-radius);
+    border-radius: var(--standard-height);
     width: 100%;
     margin-bottom: var(--standard-gap);
     flex-shrink: 0;
