@@ -574,7 +574,7 @@ async function joinParty(codeParam) {
     }
 }
 
-async function leaveParty() {
+export async function leaveParty() {
     try {
         // Find which party the user is in
         const partiesRef = ref(database, 'parties');

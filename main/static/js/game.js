@@ -2,6 +2,7 @@
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getDatabase, ref, onValue, set, get, update, remove } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+import { leaveParty } from './main.js';
 
 const firebaseConfig = {
     apiKey: "AIzaSyB1QFZFfNnT0bjJQ9CRufC3P9T2LLT8QI0",
@@ -64,3 +65,10 @@ function getInitialBills() {
         1: 5
     }
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    const leaveParty = document.getElementById('leave')
+    leaveParty.addEventListener('click', async () => {
+        leaveParty();
+    });
+});

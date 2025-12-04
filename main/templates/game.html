@@ -5,9 +5,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Monopoly round</title>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
 </head>
 <body>
     Hey.{{ player_uuid }}
+    <button id="leave">Leave</button>
+    <script>
+        window.PLAYER_UUID = "{{ player_uuid }}";
+    </script>
+    <script type="module" src="{% static 'js/main.js' %}"> defer</script>
 </body>
 </html>
