@@ -2,7 +2,7 @@
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getDatabase, ref, onValue, set, get, update, remove } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
-import { leaveParty } from './main.js';
+import { setResponsiveUnits, debounce, togglePartyView } from './ui-utils.js';
 
 const firebaseConfig = {
     apiKey: "AIzaSyB1QFZFfNnT0bjJQ9CRufC3P9T2LLT8QI0",
@@ -18,7 +18,8 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 
-// Additional game logic will go here
+const PARTY_CODE = window.PARTY_CODE;
+const PLAYER_UUID = window.PLAYER_UUID;
 
 export function initializeGameState(members) {
     const players = {};
@@ -66,9 +67,82 @@ function getInitialBills() {
     }
 }
 
+// monopoly community chests
+
+// leave-rejoins
+
+async function leaveParty() {
+    if (!PARTY_CODE || !PLAYER_UUID) {
+        console.error('Missing party info');
+        window.location.href = '/';
+        return;
+    }
+
+    const partyRef = ref(database, `parties/${PARTY_CODE}`);
+
+    try {
+        const snapshot = await get(partyRef);
+
+        if (snapshot.exists()) {
+            const partyData = snapshot.val();
+            const updatedMembers = partyData.members.filter(m => m.id !== PLAYER_UUID);
+
+            if (updatedMembers.length === 0) {
+                await remove(partyRef);
+                console.log('Party empty, deleted.');
+            } 
+
+            else {
+                const updates = {};
+                updates['members'] = updatedMembers;
+
+                if (partyData.hostUUID === PLAYER_UUID) {
+                    const newHost = updatedMembers[0];
+                    newHost.isHost = true;
+                    updates['hostUUID'] = newHost.id;
+                }
+
+                await update(partyRef, updates);
+            }
+        }
+
+        window.location.href = '/';
+
+    } catch (error) {
+        console.error('Error leaving game:', error);
+        window.location.href = '/';
+    }
+}
+
+// the initializer
+
 document.addEventListener('DOMContentLoaded', () => {
-    const leaveParty = document.getElementById('leave')
-    leaveParty.addEventListener('click', async () => {
-        leaveParty();
-    });
+
+    const board = document.getElementById('monopoly-board-container');
+    let currentRotation = 0;
+
+    const rotate90 = document.getElementById('rotate-me');
+    if (rotate90) {
+        rotate90.addEventListener('click', () => {
+            currentRotation += 90;
+            board.style.transform = `rotate(${currentRotation}deg)`;
+        });
+    }
+
+    const rotate180 = document.getElementById('rotate-me180');
+    if (rotate180) {
+        rotate180.addEventListener('click', () => {
+            currentRotation += 180;
+            board.style.transform = `rotate(${currentRotation}deg)`;
+        });
+    }
+
+    // Call the dimension setter whenever the window resizes
+    window.addEventListener('resize', debounce(setResponsiveUnits, 200));
+
+    const leaveGameBtn = document.getElementById('leave-the-game');
+    if (leaveGameBtn) {
+        leaveGameBtn.addEventListener('click', leaveParty);
+    }
+
 });

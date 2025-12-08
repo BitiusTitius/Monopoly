@@ -1,0 +1,17 @@
+<svg width="100px" height="170px">
+  <style>
+    .style {
+      font-family: 'Futura';
+      font-size: 70%;
+    }
+  </style>
+  <rect class="color-bar" width="100%" height="22%" fill="{{tile.color}}" stroke="black"/>
+  <rect width="100%" height="100%" fill="transparent"/>
+
+  <text class="tile-name style" x="50%" y="33%" dominant-baseline="hanging" text-anchor="middle">{{tile.name}}</text>
+  <text class="tile-price style" x="50%" y="84%" dominant-baseline="hanging" text-anchor="middle">₩{{tile.price}}</text>
+
+  <div class="player-markers" id="tile-{{tile.id}}-players"></div>
+  <div class="house-icons"></div>
+  <div class="hotel-icons"></div>
+</svg>
