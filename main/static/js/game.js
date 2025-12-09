@@ -3,6 +3,7 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getDatabase, ref, onValue, set, get, update, remove } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
 import { setResponsiveUnits, debounce, togglePartyView } from './ui-utils.js';
+import { buildMonopolyBoard } from './monopoly-board.js';
 
 const firebaseConfig = {
     apiKey: "AIzaSyB1QFZFfNnT0bjJQ9CRufC3P9T2LLT8QI0",
@@ -67,8 +68,6 @@ function getInitialBills() {
     }
 }
 
-// monopoly community chests
-
 // leave-rejoins
 
 async function leaveParty() {
@@ -118,31 +117,10 @@ async function leaveParty() {
 
 document.addEventListener('DOMContentLoaded', () => {
 
-    const board = document.getElementById('monopoly-board-container');
-    let currentRotation = 0;
-
-    const rotate90 = document.getElementById('rotate-me');
-    if (rotate90) {
-        rotate90.addEventListener('click', () => {
-            currentRotation += 90;
-            board.style.transform = `rotate(${currentRotation}deg)`;
-        });
-    }
-
-    const rotate180 = document.getElementById('rotate-me180');
-    if (rotate180) {
-        rotate180.addEventListener('click', () => {
-            currentRotation += 180;
-            board.style.transform = `rotate(${currentRotation}deg)`;
-        });
-    }
-
-    // Call the dimension setter whenever the window resizes
-    window.addEventListener('resize', debounce(setResponsiveUnits, 200));
+    buildMonopolyBoard();
 
     const leaveGameBtn = document.getElementById('leave-the-game');
     if (leaveGameBtn) {
         leaveGameBtn.addEventListener('click', leaveParty);
     }
-
 });
