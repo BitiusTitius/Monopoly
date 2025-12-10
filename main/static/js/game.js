@@ -1,26 +1,10 @@
 // will serve as the main JS file for the game page
 
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getDatabase, ref, onValue, set, get, update, remove } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
-import { setResponsiveUnits, debounce, togglePartyView } from './ui-utils.js';
 import { buildMonopolyBoard } from './monopoly-board.js';
-
-const firebaseConfig = {
-    apiKey: "AIzaSyB1QFZFfNnT0bjJQ9CRufC3P9T2LLT8QI0",
-    authDomain: "final-project-d8148.firebaseapp.com",
-    projectId: "final-project-d8148",
-    storageBucket: "final-project-d8148.firebasestorage.app",
-    messagingSenderId: "156143968602",
-    appId: "1:156143968602:web:937989f65b486acbf1d363",
-    measurementId: "G-CLDPJH0G5L",
-    databaseURL: "https://final-project-d8148-default-rtdb.asia-southeast1.firebasedatabase.app/"
-};
-
-const app = initializeApp(firebaseConfig);
-const database = getDatabase(app);
+import { database, PLAYER_UUID } from './firebase-config.js';
 
 const PARTY_CODE = window.PARTY_CODE;
-const PLAYER_UUID = window.PLAYER_UUID;
 
 export function initializeGameState(members) {
     const players = {};

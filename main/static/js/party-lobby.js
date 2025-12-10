@@ -65,30 +65,24 @@ export function listenToPartyChanges(partyCode) {
 }
 
 export async function populatePartyLobby(partyCode, partyData) {
-    const partyNameCode = document.getElementById('party-name-code');
-
-    if (partyNameCode) {
-        partyNameCode.textContent = (`${partyData.partyName} | ${partyCode}`);
-    }
-
+    const partyInfo = document.getElementById('party-info');
     const currentPlayerCount = partyData.members ? partyData.members.length : 0;
     const maxPlayers = partyData.playerCount || 10;
-    const partyPlayerCount = document.getElementById('party-player-count');
 
-    if (partyPlayerCount) {
-        partyPlayerCount.textContent = `${currentPlayerCount}/${maxPlayers} Players`;
+    if (partyInfo) {
+        partyInfo.textContent = (`${partyData.partyName} | ${partyCode} | ${currentPlayerCount}/${maxPlayers} Players`);
     }
 
     await renderMembersList(partyData.members);
 
     const startBtn = document.getElementById('start-game-btn');
+
     if (startBtn) {
         const isHost = partyData.hostUUID === PLAYER_UUID;
+
         if (isHost) {
             startBtn.style.display = 'block';
             startBtn.disabled = currentPlayerCount < 2;
-        } else {
-            startBtn.style.display = 'none';
         }
     }
 }

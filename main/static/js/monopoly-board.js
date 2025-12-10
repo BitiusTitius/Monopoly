@@ -27,7 +27,7 @@ const MONOPOLY_BOARD = [
     { id: 11, name: "PALL MALL", type: "property", group: "pink", price: 140, rent: 10, houses: 0, hotels: 0, ownerId: null },
     { id: 12, name: "ELECTRIC COMPANY", type: "utility", group: "utility", price: 150, rent: 4, ownerId: null },
     { id: 13, name: "WHITEHALL", type: "property", group: "pink", price: 140, rent: 10, houses: 0, hotels: 0, ownerId: null },
-    { id: 14, name: "NORTHUMBERLAND AVENUE", type: "property", group: "pink", price: 160, rent: 12, houses: 0, hotels: 0, ownerId: null },
+    { id: 14, name: "NORTHUMB'ND AVENUE", type: "property", group: "pink", price: 160, rent: 12, houses: 0, hotels: 0, ownerId: null },
     { id: 15, name: "MARYLEBONE STATION", type: "railroad", group: "railroad", price: 200, rent: 25, ownerId: null },
     { id: 16, name: "BOW STREET", type: "property", group: "orange", price: 180, rent: 14, houses: 0, hotels: 0, ownerId: null },
     { id: 17, name: "COMMUNITY CHEST", type: "card", action: "draw-community", group: "white" },
@@ -55,7 +55,7 @@ const MONOPOLY_BOARD = [
     { id: 35, name: "LIVERPOOL STREET STATION", type: "railroad", group: "railroad", price: 200, rent: 25, ownerId: null },
     { id: 36, name: "CHANCE", type: "card", action: "draw-chance", group: "white" },
     { id: 37, name: "PARK LANE", type: "property", group: "darkblue", price: 350, rent: 35, houses: 0, hotels: 0, ownerId: null },
-    { id: 38, name: "SUPER TAX", type: "tax", cost: 100, group: "tax" },
+    { id: 38, name: "SUPER TAX", type: "tax", cost: 200, group: "tax" },
     { id: 39, name: "MAYFAIR", type: "property", group: "darkblue", price: 400, rent: 50, houses: 0, hotels: 0, ownerId: null }
 ];
 
@@ -117,6 +117,17 @@ const TAX_TILE = `
     </div>
 `;
 
+const CORNER_TILE = `
+    <div class="corner [--tile-space--]">
+        <div class="non-property-content">
+            <div class="text tile-name">[--tile-name--]</div>
+            <svg>
+                <rect x="50%" y="50%" width="2vh" height="2vh" fill="red"/>
+            </svg>
+        </div>
+    </div>
+`;
+
 function getOrientationClass(tile) {
     const tileId = tile.id;
     if (tileId >= 0 && tileId <= 10) return 'bottom';
@@ -132,14 +143,6 @@ function formatTileName(name) {
     if (words.length >= 3) {
         return words.slice(0, 2).join(' ') + '<br>' + words.slice(2).join(' ');
     } 
-    
-    if (name.includes("NORTHUMBERLAND")) {
-        return name.replace("NORTHUMBERLAND", "NORTHUM<br>BERLAND");
-    }
-    
-    if (name.includes("MARLBOROUGH")) {
-        return name.replace("MARLBOROUGH", "MARLB<br>OROUGH");
-    }
 
     return name;
 }
@@ -163,8 +166,11 @@ function renderTile(tile) {
         case 'tax':
             template = TAX_TILE;
             break;
-        default:
+        case 'card':
             template = CARD_TILE.replace('card', tile.type);
+            break;
+        default:
+            template = CORNER_TILE;
     }
 
     let tileHTML = template;

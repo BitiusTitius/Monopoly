@@ -14,7 +14,13 @@
 </head>
 <body>
     <div class="game-menus">
+        <div class="left-menu-container" id="left-menu-container">
+            <button id="leave-the-game">Leave</button>
+        </div>
         <div class="monopoly-board-container" id="monopoly-board-container">
+        </div>
+        <div class="right-menu-container" id="right-menu-container">
+            Hello, {{ player_name }}!<br>
         </div>
     </div>
     <script type="module" src="{% static 'js/game.js' %}"> defer</script>

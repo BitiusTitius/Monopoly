@@ -1,46 +1,73 @@
 body {
     margin: 0;
     padding: 0;
-    background-color: #1a1a1a;
     display: flex;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
-    overflow: hidden;
 }
 
 .game-menus {
-    width: 100vmin;
-    height: 100vmin;
-    position: relative;
+    width: 100vw;
+    height: 100vh;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;  /* left menu | board | right menu */
+    grid-template-rows: 100%;
+    align-items: center;
+}
+
+#left-menu-container {
+    width: 100%;
+    height: 100%;
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: end;  /* aligns to the right side of its column */
 }
 
 #monopoly-board-container {
-    --board-size: 100vmin;
+    --board-size: 100vh;
     --short-side: calc(var(--board-size) * (75 / 915));
     --long-side: calc(var(--board-size) * (120 / 915));
 
+    grid-column: 2;
+    grid-row: 1;
+
     grid-template-columns: var(--long-side) repeat(9, var(--short-side)) var(--long-side);
     grid-template-rows: var(--long-side) repeat(9, var(--short-side)) var(--long-side);
+
     width: calc(var(--short-side) * 9 + var(--long-side) * 2);
     height: calc(var(--short-side) * 9 + var(--long-side) * 2);
     display: grid;
-    background-color: #cde6d0
 }
 
-
-
-.text {
-    font-size: 1vmin;
+#right-menu-container {
+    width: 100%;
+    height: 100%;
+    grid-column: 3;
+    grid-row: 1;
+    justify-self: start;  /* aligns to the left side of its column */
 }
 
 /* tile styles */
 
-.tile {
+.tile, .corner {
     box-sizing: border-box;
-    border-left: #000000 1px solid;
-    border-right: #000000 1px solid;
-    border-top: #000000 2px solid;
+    border: 1px solid #000000;
+    font-family: 'Arial', sans-serif;
+    overflow: hidden;
+}
+
+.corner {
+    background-color: #cde6d0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.tile {
+    width: var(--short-side);
+    height: var(--long-side);
+    background-color: #cde6d0;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -81,17 +108,26 @@ body {
 
 .tile-name {
     position: absolute;
+    font-size: 1vmin;
     top: 1vh;
 }
 
 .tile-price {
     position: absolute;
+    font-size: 1vmin;
     bottom: 1vh;
 }
 
+.bottom, .left, .top, .right {
+    transition: translate 0.2s;
+}
+
+.bottom:hover {
+    cursor: pointer;
+    translate: 0 -1vmin;
+}
+
 .left {
-    width: var(--short-side);
-    height: var(--long-side);
     transform-origin: 50% 50%;
     transform: rotate(90deg) translate(
         calc((var(--short-side) - var(--long-side)) / 2),
@@ -99,19 +135,32 @@ body {
     );
 }
 
+.left:hover {
+    cursor: pointer;
+    translate: 1vmin 0;
+}
+
 .top {
     transform-origin: 50% 50%;
     transform: rotate(180deg);
 }
 
+.top:hover {
+    cursor: pointer;
+    translate: 0 1vmin;
+}
+
 .right {
-    width: var(--short-side);
-    height: var(--long-side);
     transform-origin: 50% 50%;
     transform: rotate(270deg) translate(
         calc((var(--long-side) - var(--short-side)) / 2),
         calc((var(--long-side) - var(--short-side)) / 2)
     );
+}
+
+.right:hover {
+    cursor: pointer;
+    translate: -1vmin 0;
 }
 
 /* sets positioning */
@@ -315,94 +364,5 @@ body {
     grid-row: 10 / span 1;
     grid-column: 11 / span 1;
 }
-/*
 
-.property {
-    display: grid;
-    grid-template-rows: calc(var(--short-side) * 0.35) 1fr;
-    grid-template-columns: 100%;
-    box-sizing: border-box;
-    border: 2px solid #000000;
-}
-
-.color-bar {
-    grid-row: 1 / span 1;
-    grid-column: 1 / span 1;
-    background-color: red;
-    border-bottom: 2px solid black;
-}
-
-.tile-content {
-    display: flex;
-    
-    flex-direction: column; 
-    
-    align-items: center; 
-    
-    justify-content: center; 
-    
-    width: 100%;
-    height: 100%;
-    
-    text-align: center;
-    font-family: sans-serif;
-    padding: 2px;
-}
-
-.left {
-    outline: 1px solid #000000;
-    grid-row: 9 / span 1;
-    grid-column: 1 / span 1;
-    overflow: hidden;
-
-    width: var(--short-side);
-    height: var(--long-side);
-
-    transform-origin: 50% 50%;
-
-    transform: rotate(90deg) translate(
-        calc((var(--short-side) - var(--long-side)) / 2),
-        calc((var(--short-side) - var(--long-side)) / 2)
-    );
-}
-
-.top {
-    grid-row: 1 / span 1; 
-    grid-column: 3 / span 1;
-    overflow: hidden;
-
-    transform-origin: 50% 50%;
-    transform: rotate(180deg);
-}
-
-.right {
-    overflow: hidden;
-
-    width: var(--short-side);
-    height: var(--long-side);
-
-    transform-origin: 50% 50%;
-
-    transform: rotate(270deg) translate(
-        calc((var(--long-side) - var(--short-side)) / 2),
-        calc((var(--long-side) - var(--short-side)) / 2)
-    );
-}
-
-.space1 {
-    grid-row: 3 / span 1; 
-    grid-column: 11 / span 1;
-}
-
-.space2 {
-    grid-row: 4 / span 1; 
-    grid-column: 11 / span 1;
-}
-
-.bottom {
-    grid-row: 11 / span 1; 
-    grid-column: 9 / span 1;
-    overflow: hidden;
-    
-} */
-
+/* interactivity styles */
