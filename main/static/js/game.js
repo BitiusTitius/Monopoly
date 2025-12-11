@@ -11,6 +11,7 @@ export function initializeGameState(members) {
 
     members.forEach((member, index) => {
         players[member.id] = {
+            character: member.character || null,
             position: 0,
             money: {
                 total: 1500,

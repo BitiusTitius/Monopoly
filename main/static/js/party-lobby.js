@@ -1,6 +1,6 @@
 // party-lobby.js
 import { database, PLAYER_UUID } from './firebase-config.js';
-import { ref, get, onValue } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+import { ref, get, update, onValue } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
 import { togglePartyView, showMessage } from './ui-utils.js';
 import { usernameCache, listenToUsername, stopAllUsernameListeners } from './auth.js';
 
@@ -55,6 +55,8 @@ export function listenToPartyChanges(partyCode) {
                     return;
                 }
                 await populatePartyLobby(partyCode, partyData);
+                updateCharacterButtons(partyData.members);
+
             } else {
                 console.log('The party was disbanded.');
             }
@@ -122,5 +124,118 @@ export async function renderMembersList(members) {
         memberList.appendChild(memberDiv);
         
         return memberDiv;
+    });
+}
+
+// character selection
+
+let selectedCharacter = null;
+
+function listenToCharacterSelection(partyCode) {
+    const partyRef = ref(database, `parties/${partyCode}/members`);
+    
+    onValue(partyRef, (snapshot) => {
+        if (snapshot.exists()) {
+            const members = snapshot.val();
+            updateCharacterButtons(members);
+        }
+    });
+}
+
+function updateCharacterButtons(members) {
+    const takenCharacters = new Set();
+    
+    members.forEach(member => {
+        if (member.character) {
+            takenCharacters.add(member.character);
+            
+            if (member.id === PLAYER_UUID) {
+                selectedCharacter = member.character;
+            }
+        }
+    });
+    
+    document.querySelectorAll('.character-btn').forEach(btn => {
+        const characterId = btn.dataset.character;
+        const isTakenByOther = takenCharacters.has(characterId) && selectedCharacter !== characterId;
+
+        btn.disabled = isTakenByOther;
+        
+        if (selectedCharacter === characterId) {
+            btn.classList.add('selected');
+            btn.classList.remove('taken');
+        } else if (isTakenByOther) {
+            btn.classList.add('taken');
+            btn.classList.remove('selected');
+        } else {
+            btn.classList.remove('selected', 'taken');
+        }
+    });
+}
+
+async function selectCharacter(characterId) {
+    try {
+        const partiesRef = ref(database, 'parties');
+        const snapshot = await get(partiesRef);
+        
+        if (!snapshot.exists()) {
+            showMessage('No parties found.', 0, 4);
+            return;
+        }
+        
+        const allParties = snapshot.val();
+        let userPartyCode = null;
+        let memberIndex = -1;
+        
+        for (const [code, party] of Object.entries(allParties)) {
+            if (party.members && Array.isArray(party.members)) {
+                const index = party.members.findIndex(m => m.id === PLAYER_UUID);
+                if (index !== -1) {
+                    userPartyCode = code;
+                    memberIndex = index;
+                    break;
+                }
+            }
+        }
+        
+        if (!userPartyCode) {
+            showMessage('You are not in a party.', 0, 4);
+            return;
+        }
+        
+        const partyRef = ref(database, `parties/${userPartyCode}`);
+        const partySnapshot = await get(partyRef);
+        const partyData = partySnapshot.val();
+        
+        const isCharacterTaken = partyData.members.some(m => 
+            m.character === characterId && m.id !== PLAYER_UUID
+        );
+        
+        if (isCharacterTaken) {
+            showMessage('This character is already taken!', 0, 4);
+            return;
+        }
+        
+        const memberRef = ref(database, `parties/${userPartyCode}/members/${memberIndex}`);
+        await update(memberRef, {
+            character: characterId
+        });
+        
+        selectedCharacter = characterId;
+        showMessage(`Selected character ${characterId}`, 1, 2);
+        console.log('✅ Character selected:', characterId);
+        
+    } catch (error) {
+        console.error('Error selecting character:', error);
+        showMessage('Could not select character.', 0, 4);
+    }
+}
+
+export function initializeCharacterSelection() {
+    document.querySelectorAll('.character-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const characterId = btn.dataset.character;
+            selectCharacter(characterId);
+        });
     });
 }

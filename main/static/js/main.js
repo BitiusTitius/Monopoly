@@ -1,7 +1,7 @@
 // main.js
 import { loadUser, setUsername } from './auth.js';
 import { setResponsiveUnits, debounce, togglePartyView } from './ui-utils.js';
-import { renderPartyLobby } from './party-lobby.js';
+import { renderPartyLobby, initializeCharacterSelection } from './party-lobby.js';
 import { 
     createParty, 
     joinParty, 
@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('resize', debounce(setResponsiveUnits, 200));
     window.addEventListener('DOMContentLoaded', renderPartyLobby);
 
+    initializeCharacterSelection();
     listenToParties();
     loadUser();
     

@@ -1,11 +1,11 @@
 /*Set variables*/
 :root {
     --primary-color: #adadad;
-    --standard-gap: calc(0.5 * var(--scale-unit-w));
-    --standard-height: calc(2 * var(--scale-unit-w));
+    --standard-gap: 10px;
+    --standard-height: 35px;
     --scale-unit-w: 1px;
     --scale-unit-h: 1px;
-    --standard-border-radius: var(--scale-unit-w);
+    --standard-border-radius: 17.5px;
 }
 
 html {
@@ -60,7 +60,7 @@ body {
 .party-container {
     background-color: #d3718b;
     width: calc(30 * var(--scale-unit-w)); 
-    height: calc(60 * var(--scale-unit-h));
+    height: calc(70 * var(--scale-unit-h));
     border-radius: var(--standard-border-radius);
     transition: width 0.3s ease-out, height 0.3s ease-out;
     padding: var(--standard-gap);
@@ -80,7 +80,7 @@ body {
 .user-container {
     background-color: #3579b1;
     width: calc(15 * var(--scale-unit-w)); 
-    height: calc(60 * var(--scale-unit-h));
+    height: calc(70 * var(--scale-unit-h));
     border-radius: var(--standard-border-radius);
     transition: width 0.3s ease-out, height 0.3s ease-out;
     padding: var(--standard-gap);
@@ -241,10 +241,9 @@ body {
 .party-lobby-header {
     background-color: white;
     border-radius: var(--standard-border-radius);
-    padding: var(--standard-gap);
     display: flex;
+    overflow: hidden;
     flex-direction: column;
-    gap: var(--standard-gap);
 }
 
 .party-info {
@@ -252,18 +251,22 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: var(--scale-unit-w);
+    font-stretch: expanded;
     height: var(--standard-height);
 }
 
 .party-members-list {
-    border-radius: var(--standard-border-radius);
+    border-top-right-radius: var(--standard-border-radius);
+    border-top-left-radius: var(--standard-border-radius);
+    border-bottom: #555 1px solid;
     padding: var(--standard-gap);
-    background-color: #f9f9f9;
+    min-height: 0;
     overflow-y: auto;
 }
 
 .character-select {
+    text-align: center;
+    margin: var(--standard-gap);
     display: flex;
     flex-direction: column;
     gap: var(--standard-gap);
@@ -276,13 +279,15 @@ body {
 
 .character-grid {
     display: grid;
-    grid-template-columns: repeat(8, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(var(--standard-height), 1fr));
     grid-template-rows: 1fr;
+    gap: var(--standard-gap);
 }
 
 .character-btn {
+    height: var(--standard-height);
     aspect-ratio: 1;
-    border: 2px solid #ddd;
+    border: none;
     border-radius: var(--standard-border-radius);
     background-color: #f0f0f0;
     cursor: pointer;
@@ -305,14 +310,12 @@ body {
 /* Action Buttons (Horizontal) */
 .party-lobby-buttons {
     display: flex;
-    gap: var(--standard-gap);
     justify-content: space-between;
 }
 
 .party-lobby-buttons button {
     flex: 1;
     border: none;
-    border-radius: var(--standard-border-radius);
     height: var(--standard-height);
     font-weight: bold;
     font-size: 1em;
@@ -372,17 +375,16 @@ body {
 
 .chat-input-container {
     display: flex;
-    gap: var(--standard-gap);
-    padding: var(--standard-gap);
-    border-top: 2px solid #ddd;
+    height: var(--standard-height);
     background-color: #f9f9f9;
 }
 
 .chat-input {
     flex: 1;
     padding: var(--standard-gap);
-    border: 2px solid #ddd;
-    border-radius: var(--standard-border-radius);
+    background-color: rgb(220, 220, 220);
+    border: none;
+    border-bottom-left-radius: var(--standard-border-radius);
     font-size: 1em;
 }
 
@@ -396,7 +398,7 @@ body {
     background-color: #4CAF50;
     color: white;
     border: none;
-    border-radius: var(--standard-border-radius);
+    border-bottom-right-radius: var(--standard-border-radius);
     font-weight: bold;
     cursor: pointer;
     transition: background-color 0.2s;
@@ -406,7 +408,6 @@ body {
     background-color: #45a049;
 }
 
-/* Scrollbar styling */
 .party-members-list::-webkit-scrollbar,
 .chat-messages::-webkit-scrollbar {
     width: 8px;

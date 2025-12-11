@@ -228,7 +228,7 @@ export async function startParty() {
         }
 
         if (!hostParty) {
-            showMessage('You are not the host of any party.', 0, 4);
+            showMessage('You are not the host of this party.', 0, 4);
             console.log('User is not a host');
             return;
         }
@@ -253,6 +253,7 @@ export async function startParty() {
         }
 
         const partyRef = ref(database, `parties/${hostPartyCode}`);
+
         await update(partyRef, {
             status: 1,
             startedAt: Date.now(),
