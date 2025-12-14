@@ -67,7 +67,7 @@ export async function setUsername() {
         
         if (snapshot.exists()) {
             await update(userRef, userData);
-            showMessage(`Your are now: ${userData.username}.`, 1, 4);
+            showMessage(`You are now: ${userData.username}.`, 1, 4);
             console.log(`UUID ${[PLAYER_UUID]} has changed their name to ${userData.username}.`);
         } else {
             await set(userRef, userData);

@@ -1,3 +1,9 @@
+:root {
+    --standard-gap: 10px;
+    --standard-height: 35px;
+    --standard-border-radius: 17.5px;
+}
+
 body {
     margin: 0;
     padding: 0;
@@ -5,6 +11,9 @@ body {
     justify-content: center;
     align-items: center;
     min-height: 100vh;
+    overflow: hidden;
+
+    background-color: rgb(172, 172, 172);
 }
 
 .game-menus {
@@ -13,15 +22,6 @@ body {
     display: grid;
     grid-template-columns: 1fr auto 1fr;  /* left menu | board | right menu */
     grid-template-rows: 100%;
-    align-items: center;
-}
-
-#left-menu-container {
-    width: 100%;
-    height: 100%;
-    grid-column: 1;
-    grid-row: 1;
-    justify-self: end;  /* aligns to the right side of its column */
 }
 
 #monopoly-board-container {
@@ -37,15 +37,8 @@ body {
 
     width: calc(var(--short-side) * 9 + var(--long-side) * 2);
     height: calc(var(--short-side) * 9 + var(--long-side) * 2);
+    background-color: #cde6d0;
     display: grid;
-}
-
-#right-menu-container {
-    width: 100%;
-    height: 100%;
-    grid-column: 3;
-    grid-row: 1;
-    justify-self: start;  /* aligns to the left side of its column */
 }
 
 /* tile styles */
@@ -58,10 +51,14 @@ body {
 }
 
 .corner {
+    width: var(--long-side);
+    height: var(--long-side);
     background-color: #cde6d0;
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
+    position: relative;
 }
 
 .tile {
@@ -71,6 +68,8 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
+    position: relative;
 }
 
 .color-bar {
@@ -365,4 +364,165 @@ body {
     grid-column: 11 / span 1;
 }
 
-/* interactivity styles */
+.tile-content {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
+.player-content {
+    position: absolute;
+    width: calc(var(--short-side) * 0.8);
+    aspect-ratio: 1;
+    z-index: 2;
+
+    display: grid;
+
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+}
+
+.player-piece {
+    transition: transform 0.2s ease-in-out;
+}
+
+.player-piece:hover {
+    transform: scale(1.4);
+}
+
+/* menu universal styles */
+
+.header2 {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: var(--standard-height);
+    font-size: 2vh;
+    font-weight: bold;
+}
+
+/* left-menu */
+
+.left-menu-container {
+    width: calc(100% - (2 * var(--standard-gap)));
+    margin-top: var(--standard-gap);
+    margin-left: var(--standard-gap);
+    grid-column: 1;
+    grid-row: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--standard-gap);
+}
+
+.left-ui {
+    border-radius: var(--standard-border-radius);
+    background: white;
+}
+
+.party-information {
+    border-top-right-radius: var(--standard-border-radius);
+    border-top-left-radius: var(--standard-border-radius);
+    background-color: rgb(10, 173, 10);
+    color: rgb(255, 255, 255);
+}
+
+.turn-information {
+    display: flex;
+    flex-direction: row;
+    height: var(--standard-height);
+    gap: var(--standard-gap);
+}
+
+.turn-message, .dice-roller {
+    border-radius: var(--standard-border-radius);
+    font-size: 1em;
+    font-weight: bold;
+}
+
+.turn-message {
+    display: flex;
+    align-items: center;
+    text-wrap: nowrap;
+    overflow: hidden;
+    background-color: white;
+    padding-left: var(--standard-gap);
+    flex: 1;
+    transition: background-color 0.2s ease-in-out;
+}
+
+.dice-roller {
+    border: none;
+    width: 100px;
+    background-color: white;
+    transition: background-color 0.2s ease-in-out;
+}
+
+.dice-roller:hover {
+    cursor: pointer;
+    background-color: rgb(211, 211, 211);
+}
+
+/* right-menu */
+
+.right-menu-container {
+    width: calc(100% - (2 * var(--standard-gap)));
+    margin-top: var(--standard-gap);
+    margin-left: var(--standard-gap);
+    grid-column: 3;
+    grid-row: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--standard-gap);
+}
+
+.right-ui {
+    border-radius: var(--standard-border-radius);
+    background: white;
+}
+
+.player-currency {
+    margin-bottom: var(--standard-gap);
+    border-bottom: #555 1px solid;
+    overflow: hidden;
+}
+
+.player-currency-text {
+    text-wrap: nowrap;
+}
+
+.currency-amount {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #000000;
+    font-size: 4vh;
+    padding: var(--standard-gap);
+    color: rgb(10, 173, 10);
+    font-weight: bold;
+}
+
+.denomination-text {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.denomination-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(var(--standard-height), 1fr));
+    padding: var(--standard-gap);
+}
+
+/* player list */
+
+.player-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--standard-gap);
+    padding: var(--standard-gap);
+}
+
+.player-list-item {
+    display: flex;
+}

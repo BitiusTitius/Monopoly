@@ -1,3 +1,5 @@
+// main homepage ui utilities
+
 export function togglePartyView(viewName) {
     const creationMenu = document.getElementById('party-creation-menu'); 
     const listMenu = document.getElementById('party-list-menu'); 
@@ -84,3 +86,5 @@ export function setResponsiveUnits() {
         window.requestAnimationFrame(() => {});
     });
 }
+
+// game page ui utilities

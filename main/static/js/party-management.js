@@ -9,6 +9,7 @@ import { initializeGameState } from './game.js';
 export function generatePartyCode() {
     const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let code = '';
+
     for (let i = 0; i < 6; i++) {
         code += characters.charAt(Math.floor(Math.random() * characters.length));
     }
@@ -78,8 +79,8 @@ export async function createParty() {
 
 export async function joinParty(codeParam) {
     const codeInput = document.getElementById('join-code-input');
-    
     let partyCode;
+
     if (typeof codeParam === 'string' && codeParam.length > 0) {
         partyCode = codeParam;
     } else if (codeInput) {
@@ -126,7 +127,7 @@ export async function joinParty(codeParam) {
 
         if (currentMembers.length >= partyData.playerCount) {
             showMessage('That party is full.', 0, 4);
-            console.log('that party is full');
+            console.log('That party is full.');
             return;
         }
 
@@ -173,6 +174,7 @@ export async function leaveParty() {
                         await remove(partyRef);
                         showMessage(`You have left; party has been deleted.`, 0, 4);
                         console.log('Party deleted (last person left)');
+
                     } else if (party.hostUUID === PLAYER_UUID) {
                         const newHost = updatedMembers[0];
                         newHost.isHost = true;
@@ -181,8 +183,10 @@ export async function leaveParty() {
                             members: updatedMembers,
                             hostUUID: newHost.id
                         });
+
                         showMessage(`You have left. Host has been transferred.`, 0, 4);
                         console.log('Left party and transferred host');
+
                     } else {
                         await update(partyRef, {
                             members: updatedMembers
@@ -246,6 +250,7 @@ export async function startParty() {
         }
 
         const playerCount = hostParty.members ? hostParty.members.length : 0;
+
         if (playerCount < 2) {
             showMessage('You need at least 2 players to start.', 0, 4);
             console.log('Not enough players');
@@ -281,7 +286,7 @@ export function renderPartyList(allParties) {
     currentPartyList.innerHTML = '';
 
     if (!allParties || Object.keys(allParties).length === 0) {
-        currentPartyList.innerHTML = '<p>no active parties rn</p>';
+        currentPartyList.innerHTML = '<p>No active parties currently.</p>';
         return;
     }
 
