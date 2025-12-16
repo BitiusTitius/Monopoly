@@ -2,6 +2,8 @@
     --standard-gap: 10px;
     --standard-height: 35px;
     --standard-border-radius: 17.5px;
+    --deedWidth: 20vh;
+    --deedHeight: calc((var(--deedWidth) * 244) / 157)
 }
 
 body {
@@ -12,8 +14,26 @@ body {
     align-items: center;
     min-height: 100vh;
     overflow: hidden;
-
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
     background-color: rgb(172, 172, 172);
+}
+
+.appear-above {
+    position: absolute;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    z-index: 2;
+    pointer-events: none;
+}
+
+.appear-below {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
 }
 
 .game-menus {
@@ -45,7 +65,7 @@ body {
 
 .tile, .corner {
     box-sizing: border-box;
-    border: 1px solid #000000;
+    border: 0.1vh solid #000000;
     font-family: 'Arial', sans-serif;
     overflow: hidden;
 }
@@ -75,8 +95,11 @@ body {
 .color-bar {
     width: 100%;
     height: 24%;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: 1fr;
     background-color: red;
-    border-bottom: #000000 2px solid;
+    border-bottom: #000000 0.1vh solid;
 }
 
 .property-content {
@@ -525,4 +548,30 @@ body {
 
 .player-list-item {
     display: flex;
+}
+
+/* deed */
+
+.deed-card {
+    width: var(--deedWidth);
+    height: var(--deedHeight);
+    padding: calc(var(--deedWidth) * (9 / 157));
+    background-color: white;
+    display: flex;
+    overflow: hidden;
+}   
+
+.deed-content {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    padding: calc(var(--deedWidth) * (5 / 157));
+    border: black 0.3vh solid;
+}
+
+.property-bar {
+    overflow: hidden;
+    background-color: lightblue;
+    border: black 0.3vh solid;
+    height: calc(var(--deedHeight) * (48 / 244))
 }

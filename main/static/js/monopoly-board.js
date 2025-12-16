@@ -1,4 +1,15 @@
-import { MONOPOLY_BOARD } from './game-functions.js';
+export const BUILDING_COSTS = {
+    brown: 50,
+    lightblue: 50,
+    pink: 100,
+    orange: 100,
+    red: 150,
+    yellow: 150,
+    green: 200,
+    darkblue: 200,
+};
+
+import { MONOPOLY_BOARD } from "./game-functions.js";
 
 const PROPERTY_TILE = `
     <div class="tile [--tile-space--] property [--tile-rotation--]">
@@ -138,7 +149,7 @@ function renderTile(tile) {
             template = TAX_TILE;
             break;
         case 'card':
-            template = CARD_TILE;
+            template = CARD_TILE.replace('card', tile.type);
             break;
         default:
             template = CORNER_TILE;
@@ -177,4 +188,31 @@ export function buildMonopolyBoard() {
     }
 
     boardContainer.innerHTML = boardHTML;
+}
+
+const PROPERTY_DEED = `
+    Oi
+`;
+
+const RAILROAD_DEED = `
+    Oi    
+`;
+
+const UTILITY_DEED = `
+    Oi
+`;
+
+export function renderDeed(property) {
+    let template;
+
+    switch (tile.type) {
+        case 'utility':
+            template = UTILITY_DEED;
+            break;
+        case `railroad`:
+            template = RAILROAD_DEED;
+            break;
+        default:
+            template = PROPERTY_DEED;
+    }
 }

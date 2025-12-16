@@ -13,63 +13,78 @@
     </script>
 </head>
 <body>
-    <div class="game-menus">
-        <div class="left-menu-container" id="left-menu-container">
-            <div class="game-information left-ui">
-                <div class="party-information header2">
-                    {{ party_code }}
+    <div class="appear-above">
+        <div class="deed-card">
+            <div class="deed-content">
+                <!--For property-->
+                <div class="property-bar">
+                    Test, I love you Makima!!!
                 </div>
-                <div class="player-list" id="player-list">
-                    Hello!!!!
-                </div>
-            </div>
-            <div class="turn-information">
-                <div class="turn-message">
-                    It's your turn!
-                    <!-- It's your turn. -->
-                    <!-- It's [playername]'s. turn. -->
-                    <!-- It's not your turn. -->
-                </div>
-                <button class="dice-roller" id="dice-roller">Roll dice</button>
+                <!--For railroad and utility-->
             </div>
         </div>
-        <div class="monopoly-board-container" id="monopoly-board-container">
-        </div>
-        <div class="right-menu-container" id="right-menu-container">
-            <div class="currency-information right-ui">
-                <div class="player-currency" id="player-currency">
-                    <div class="player-currency-text header2">YOU CURRENTLY HAVE:</div>
-                    <div class="currency-amount" id="currency-amount"></div>
-                    <div class="player-currency-text header2">TO YOUR NAME!</div>
-                </div>
-                <div class="denomination-information">
-                    <div class="denomination-text">Amount per denomination</div>
-                    <div class="denomination-list">
-                        <!-- Denomination items will be rendered here -->
+    </div>
+    <div class="appear-below">
+        <div class="game-menus">
+            <div class="left-menu-container" id="left-menu-container">
+                <div class="game-information left-ui">
+                    <div class="party-information header2">
+                        {{ party_code }}
                     </div>
+                    <div class="player-list" id="player-list">
+                        Hello!!!!
+                    </div>
+                </div>
+                <div class="turn-information">
+                    <div class="turn-message">
+                        It's your turn!
+                        <!-- It's your turn. -->
+                        <!-- It's [playername]'s. turn. -->
+                        <!-- It's not your turn. -->
+                    </div>
+                    <button class="dice-roller" id="dice-roller">Roll dice</button>
                 </div>
             </div>
-            <div class="property-information right-ui">
-                <h2>Your posessions</h2>
-                <div class="property-list" id="property-list">
-                    <!-- Property items will be rendered here -->
-                </div>
+            <div class="monopoly-board-container" id="monopoly-board-container">
             </div>
-            <div class="trade-menu right-ui">
-                <h2>Trade</h2>
-                <div class="give-receive-container">
-                    <div class="to-give">
-
+            <div class="right-menu-container" id="right-menu-container">
+                <div class="currency-information right-ui">
+                    <div class="player-currency" id="player-currency">
+                        <div class="player-currency-text header2">YOU CURRENTLY HAVE:</div>
+                        <div class="currency-amount" id="currency-amount"></div>
+                        <div class="player-currency-text header2">TO YOUR NAME!</div>
                     </div>
-                    <div class="to-receive">
-
+                    <div class="denomination-information">
+                        <div class="denomination-text">Amount per denomination</div>
+                        <div class="denomination-list">
+                            <!-- Denomination items will be rendered here -->
+                        </div>
                     </div>
                 </div>
-                <div class="trade-action-buttons">
-                    <button id="propose-trade-btn">Propose Trade</button>
-                    <button id="cancel-trade-btn">Cancel</button>
+                <div class="property-information right-ui">
+                    <h2>Your posessions</h2>
+                    <div class="property-list" id="property-list">
+                        <!-- Property items will be rendered here -->
+                    </div>
                 </div>
-                <button id="leave-the-game">Leave</button>
+                <div class="trade-menu right-ui">
+                    <!--trading between players-->
+                    <h2>Trade</h2>
+                    <div class="give-receive-container">
+                        <div class="to-give">
+
+                        </div>
+                        <div class="to-receive">
+
+                        </div>
+                    </div>
+                    <div class="trade-action-buttons">
+                        <button id="propose-trade-btn">Propose Trade</button>
+                        <button id="cancel-trade-btn">Cancel</button>
+                    </div>
+                    <!--paying rent-->
+                    <button id="leave-the-game">Leave</button>
+                </div>
             </div>
         </div>
     </div>

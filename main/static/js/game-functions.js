@@ -9,7 +9,7 @@ export const MONOPOLY_BOARD = [
     { id: 1, name: "OLD KENT ROAD", type: "property", group: "brown", price: 60, rent: 2 },
     { id: 2, name: "COMMUNITY CHEST", type: "card", group: "white" },
     { id: 3, name: "WHITECHAPEL ROAD", type: "property", group: "brown", price: 60, rent: 4 },
-    { id: 4, name: "INCOME TAX", type: "tax", cost: 200, group: "tax" },
+    { id: 4, name: "INCOME TAX", type: "tax", cost: 100, group: "tax" },
     { id: 5, name: "KING'S CROSS STATION", type: "railroad", group: "railroad", price: 200, rent: 25 },
     { id: 6, name: "THE ANGEL, ISLINGTON", type: "property", group: "lightblue", price: 100, rent: 6 },
     { id: 7, name: "CHANCE", type: "card", group: "white" },
@@ -159,25 +159,13 @@ export async function movePlayer(partyCode, playerUUID, spaces) {
 
         switch (landedTile.type) {
             case 'property':
-                if (!propertyData.ownerId) {
-                    console.log('No one owns this yet!')
-                } else {
-                    console.log('This property belongs to', propertyData.ownerId)
-                }
+                await detectProperty(partyCode, newPosition);
                 break;
             case 'railroad':
-                if (!propertyData.ownerId) {
-                    console.log('No one owns this yet!')
-                } else {
-                    console.log('This property belongs to', propertyData.ownerId)
-                }
+                await detectProperty(partyCode, newPosition);
                 break;
             case 'utility':
-                if (!propertyData.ownerId) {
-                    console.log('No one owns this yet!')
-                } else {
-                    console.log('This property belongs to', propertyData.ownerId)
-                }
+                await detectProperty(partyCode, newPosition);
                 break;
             case 'card':
                 if (landedTile.name.includes('COMMUNITY CHEST')) {
@@ -201,8 +189,8 @@ export async function movePlayer(partyCode, playerUUID, spaces) {
                 break;
             case 'corner':
                 if (landedTile.name.includes('GO TO JAIL')) {
-                    await goToJail();
-                    updates.position = 10;
+                    await goToJail(partyCode, playerUUID);
+                    return { oldPosition, newPosition: 10, passedGo: false };
                 }
                 break;
             default:
@@ -210,7 +198,7 @@ export async function movePlayer(partyCode, playerUUID, spaces) {
                 break;
         }
 
-        await update(playerRef, updates);
+        await update(playerRef, { position: newPosition});
         return { oldPosition, newPosition, passedGo };
         
     } catch (error) {
@@ -319,9 +307,45 @@ async function chanceCard() {
     return;
 }
 
-async function goToJail() {
-    console.log('Go to Jail executed');
-    return;
+async function goToJail(partyCode, playerUUID) {
+    const playerRef = ref(database, `parties/${partyCode}/game/players/${playerUUID}`);
+    
+    await update(playerRef, {
+        position: 10,
+        inJail: true
+    });
+
+    console.log('Successfully sent that motherfucker to jail.')
+}
+
+async function detectProperty(partyCode, property) {
+    const propertyRef = ref(database, `parties/${partyCode}/game/properties/${property}`);
+    const propertySnapshot = await get(propertyRef);
+
+    if (!propertySnapshot.exists()) {
+        console.log('Property not found.');
+        return;
+    }
+
+    const propertyData = propertySnapshot.val();
+
+    if (!propertyData.ownerId) {
+        console.log('No one owns this yet!')
+    } else {
+        console.log(`This property belongs to ${propertyData.ownerId}!`);
+    }
+}
+
+async function buyProperty() {
+    // wip
+}
+
+async function auctionProperty() {
+    // wip
+}
+
+async function developProperty() {
+    // wip
 }
 
 // turn functions
@@ -361,6 +385,30 @@ export async function rollDiceAndMove(partyCode, playerUUID) {
             'dice': [die1, die2],
             'phase': 'moving'
         });
+
+        const playerData = gameData.players[playerUUID];
+        const isInJail = playerData.inJail || false;
+
+        if (isInJail) {
+            const playerRef = ref(database, `parties/${partyCode}/game/players/${playerUUID}`);
+
+            if (isDoubles) {
+                await update(playerRef, {
+                    inJail: false,
+                    doublesInARow: 0
+                })
+
+                const moveResult = await movePlayer(partyCode, playerUUID, total);
+
+                console.log('Rolled double; sending you OUT of jail NOW.');
+                await endTurn(partyCode, gameData);
+                return { die1, die2, total, isDoubles, moveResult };
+            } else {
+                console.log('No doubles, yo ass is staying in jail.');
+                await endTurn(partyCode, gameData);
+                return { die1, die2, total, isDoubles, moveResult };
+            }
+        }
 
         const moveResult = await movePlayer(partyCode, playerUUID, total);
 
