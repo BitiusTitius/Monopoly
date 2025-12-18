@@ -1,56 +1,59 @@
 import { database } from './firebase-config.js';
 import { ref, get, update, onValue } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
 
-import { stopAllUsernameListeners, listenToUsername, clearUsernameCache } from './auth.js';
+import { listenToUsername } from './auth.js';
+import { renderDeedCard } from './monopoly-board.js';
+
+import { PARTY_CODE, PLAYER_UUID } from './game.js';
 
 export const MONOPOLY_BOARD = [
     // bottom-end
     { id: 0, name: "GO", type: "corner", group: "start", price: 0 },
-    { id: 1, name: "OLD KENT ROAD", type: "property", group: "brown", price: 60, rent: 2 },
+    { id: 1, name: "OLD KENT ROAD", type: "property", group: "brown", price: 60, rent: [2, 4, 10, 30, 90, 160, 250] },
     { id: 2, name: "COMMUNITY CHEST", type: "card", group: "white" },
-    { id: 3, name: "WHITECHAPEL ROAD", type: "property", group: "brown", price: 60, rent: 4 },
+    { id: 3, name: "WHITECHAPEL ROAD", type: "property", group: "brown", price: 60, rent: [4, 8, 20, 60, 180, 320, 450] },
     { id: 4, name: "INCOME TAX", type: "tax", cost: 100, group: "tax" },
     { id: 5, name: "KING'S CROSS STATION", type: "railroad", group: "railroad", price: 200, rent: 25 },
-    { id: 6, name: "THE ANGEL, ISLINGTON", type: "property", group: "lightblue", price: 100, rent: 6 },
+    { id: 6, name: "THE ANGEL, ISLINGTON", type: "property", group: "lightblue", price: 100, rent: [6, 12, 30, 90, 270, 400, 550] },
     { id: 7, name: "CHANCE", type: "card", group: "white" },
-    { id: 8, name: "EUSTON ROAD", type: "property", group: "lightblue", price: 100, rent: 6 },
-    { id: 9, name: "PENTONVILLE ROAD", type: "property", group: "lightblue", price: 120, rent: 8 },
+    { id: 8, name: "EUSTON ROAD", type: "property", group: "lightblue", price: 100, rent: [6, 12, 30, 90, 270, 400, 550] },
+    { id: 9, name: "PENTONVILLE ROAD", type: "property", group: "lightblue", price: 120, rent: [8, 16, 40, 100, 300, 450, 600] },
 
     // left-end
     { id: 10, name: "JAIL", type: "corner", group: "jail" },
-    { id: 11, name: "PALL MALL", type: "property", group: "pink", price: 140, rent: 10 },
+    { id: 11, name: "PALL MALL", type: "property", group: "pink", price: 140, rent: [10, 20, 50, 150, 450, 625, 750] },
     { id: 12, name: "ELECTRIC COMPANY", type: "utility", group: "utility", price: 150, rent: 4 },
-    { id: 13, name: "WHITEHALL", type: "property", group: "pink", price: 140, rent: 10 },
-    { id: 14, name: "NORTHUMB'ND AVENUE", type: "property", group: "pink", price: 160, rent: 12 },
+    { id: 13, name: "WHITEHALL", type: "property", group: "pink", price: 140, rent: [10, 20, 50, 150, 450, 625, 750] },
+    { id: 14, name: "NORTHUMB'ND AVENUE", type: "property", group: "pink", price: 160, rent: [12, 24, 60, 180, 500, 700, 900] },
     { id: 15, name: "MARYLEBONE STATION", type: "railroad", group: "railroad", price: 200, rent: 25 },
-    { id: 16, name: "BOW STREET", type: "property", group: "orange", price: 180, rent: 14 },
+    { id: 16, name: "BOW STREET", type: "property", group: "orange", price: 180, rent: [14, 28, 70, 200, 550, 750, 950] },
     { id: 17, name: "COMMUNITY CHEST", type: "card", group: "white" },
-    { id: 18, name: "MARLBOROUGH STREET", type: "property", group: "orange", price: 180, rent: 14 },
-    { id: 19, name: "VINE STREET", type: "property", group: "orange", price: 200, rent: 16 },
+    { id: 18, name: "MARLBOROUGH STREET", type: "property", group: "orange", price: 180, rent: [14, 28, 70, 200, 550, 750, 950] },
+    { id: 19, name: "VINE STREET", type: "property", group: "orange", price: 200, rent: [16, 32, 80, 220, 600, 800, 1000] },
 
     // top-end
     { id: 20, name: "FREE PARKING", type: "corner", group: "free-parking" },
-    { id: 21, name: "THE STRAND", type: "property", group: "red", price: 220, rent: 18 },
+    { id: 21, name: "THE STRAND", type: "property", group: "red", price: 220, rent: [18, 36, 90, 250, 700, 875, 1050] },
     { id: 22, name: "CHANCE", type: "card", group: "white" },
-    { id: 23, name: "FLEET STREET", type: "property", group: "red", price: 220, rent: 18 },
-    { id: 24, name: "TRAFALGAR SQUARE", type: "property", group: "red", price: 240, rent: 20 },
+    { id: 23, name: "FLEET STREET", type: "property", group: "red", price: 220, rent: [18, 36, 90, 250, 700, 875, 1050] },
+    { id: 24, name: "TRAFALGAR SQUARE", type: "property", group: "red", price: 240, rent: [20, 40, 100, 300, 750, 925, 1100] },
     { id: 25, name: "FENCHURCH ST STATION", type: "railroad", group: "railroad", price: 200, rent: 25 },
-    { id: 26, name: "LEICESTER SQUARE", type: "property", group: "yellow", price: 260, rent: 22 },
-    { id: 27, name: "COVENTRY STREET", type: "property", group: "yellow", price: 260, rent: 22 },
+    { id: 26, name: "LEICESTER SQUARE", type: "property", group: "yellow", price: 260, rent: [22, 44, 110, 330, 800, 975, 1150] },
+    { id: 27, name: "COVENTRY STREET", type: "property", group: "yellow", price: 260, rent: [22, 44, 110, 330, 800, 975, 1150] },
     { id: 28, name: "WATER WORKS", type: "utility", group: "utility", price: 150, rent: 4 },
-    { id: 29, name: "PICCADILLY", type: "property", group: "yellow", price: 280, rent: 24 },
+    { id: 29, name: "PICCADILLY", type: "property", group: "yellow", price: 280, rent: [24, 48, 120, 360, 850, 1025, 1200] },
 
     // right-end
     { id: 30, name: "GO TO JAIL", type: "corner", group: "go-to-jail" },
-    { id: 31, name: "REGENT STREET", type: "property", group: "green", price: 300, rent: 26 },
-    { id: 32, name: "OXFORD STREET", type: "property", group: "green", price: 300, rent: 26 },
+    { id: 31, name: "REGENT STREET", type: "property", group: "green", price: 300, rent: [26, 52, 130, 390, 900, 1100, 1275] },
+    { id: 32, name: "OXFORD STREET", type: "property", group: "green", price: 300, rent: [26, 52, 130, 390, 900, 1100, 1275] },
     { id: 33, name: "COMMUNITY CHEST", type: "card", group: "white" },
-    { id: 34, name: "BOND STREET", type: "property", group: "green", price: 320, rent: 28 },
+    { id: 34, name: "BOND STREET", type: "property", group: "green", price: 320, rent: [28, 56, 150, 450, 1000, 1200, 1400] },
     { id: 35, name: "LIVERPOOL STREET STATION", type: "railroad", group: "railroad", price: 200, rent: 25 },
     { id: 36, name: "CHANCE", type: "card", group: "white" },
-    { id: 37, name: "PARK LANE", type: "property", group: "darkblue", price: 350, rent: 35 },
+    { id: 37, name: "PARK LANE", type: "property", group: "darkblue", price: 350, rent: [35, 70, 175, 500, 1100, 1300, 1500] },
     { id: 38, name: "SUPER TAX", type: "tax", cost: 200, group: "tax" },
-    { id: 39, name: "MAYFAIR", type: "property", group: "darkblue", price: 400, rent: 50 }
+    { id: 39, name: "MAYFAIR", type: "property", group: "darkblue", price: 400, rent: [50, 100, 200, 600, 1400, 1700, 2000] }
 ];
 
 const CHARACTER_ICONS = {
@@ -66,9 +69,9 @@ const CHARACTER_ICONS = {
 
 // player movement and rendering
 
-export async function renderPlayer(partyCode, playerUUID) {
+export async function renderPlayer(targetUUID) {
     try {
-        const playerRef = ref(database, `parties/${partyCode}/game/players/${playerUUID}`);
+        const playerRef = ref(database, `parties/${PARTY_CODE}/game/players/${targetUUID}`);
         const snapshot = await get(playerRef);
 
         if (!snapshot.exists()) {
@@ -85,11 +88,11 @@ export async function renderPlayer(partyCode, playerUUID) {
             return;
         }
 
-        document.querySelectorAll(`.player-piece[data-player-id="${playerUUID}"]`).forEach(p => p.remove());
+        document.querySelectorAll(`.player-piece[data-player-id="${targetUUID}"]`).forEach(p => p.remove());
         
         const playerPiece = document.createElement('div');
         playerPiece.className = 'player-piece';
-        playerPiece.dataset.playerId = playerUUID;
+        playerPiece.dataset.playerId = targetUUID;
         playerPiece.dataset.character = character;
         playerPiece.textContent = CHARACTER_ICONS[character] || '❓';
         playerPiece.title = `Player ${character}`;
@@ -108,9 +111,9 @@ export async function renderPlayer(partyCode, playerUUID) {
     }
 }
 
-export async function movePlayer(partyCode, playerUUID, spaces) {
+export async function movePlayer(spaces) {
     try {
-        const playerRef = ref(database, `parties/${partyCode}/game/players/${playerUUID}`);
+        const playerRef = ref(database, `parties/${PARTY_CODE}/game/players/${PLAYER_UUID}`);
         const snapshot = await get(playerRef);
 
         if (!snapshot.exists()) {
@@ -140,10 +143,8 @@ export async function movePlayer(partyCode, playerUUID, spaces) {
             passedGo = true;
         }
 
-        const updates = { position: newPosition };
-
         if (passedGo) {
-            await collectGo(partyCode, playerUUID);
+            await collectGo();
         }
 
         const landedTile = MONOPOLY_BOARD.find(tile => tile.id === newPosition)
@@ -152,20 +153,16 @@ export async function movePlayer(partyCode, playerUUID, spaces) {
             console.error(`Error: Landed on invalid position ID ${newPosition}`);
             return;
         }
-        
-        const propertyRef = ref(database, `parties/${partyCode}/game/properties/${newPosition}`)
-        const propertySnapshot = await get(propertyRef);
-        const propertyData = propertySnapshot.val();
 
         switch (landedTile.type) {
             case 'property':
-                await detectProperty(partyCode, newPosition);
+                console.log('You landed on property', newPosition);
                 break;
             case 'railroad':
-                await detectProperty(partyCode, newPosition);
+                console.log('You landed on property', newPosition);
                 break;
             case 'utility':
-                await detectProperty(partyCode, newPosition);
+                console.log('You landed on property', newPosition);
                 break;
             case 'card':
                 if (landedTile.name.includes('COMMUNITY CHEST')) {
@@ -189,7 +186,7 @@ export async function movePlayer(partyCode, playerUUID, spaces) {
                 break;
             case 'corner':
                 if (landedTile.name.includes('GO TO JAIL')) {
-                    await goToJail(partyCode, playerUUID);
+                    await goToJail();
                     return { oldPosition, newPosition: 10, passedGo: false };
                 }
                 break;
@@ -207,33 +204,34 @@ export async function movePlayer(partyCode, playerUUID, spaces) {
     }
 }
 
-export async function initializePlayerPieces(partyCode, players) {
+export async function initializePlayerPieces(players) {
     document.querySelectorAll('.player-piece').forEach(p => p.remove());
 
-    const renderPromises = Object.keys(players).map(playerUUID => renderPlayer(partyCode, playerUUID));
+    const renderPromises = Object.keys(players).map(uuid => renderPlayer(uuid));
 
     await Promise.all(renderPromises);
 
     console.log('Initialized all player pieces on the board');
 }
 
-export function listenToPlayerMovement(partyCode, playerUUID) {
-    const playerRef = ref(database, `parties/${partyCode}/game/players/${playerUUID}`);
+
+export function listenToPlayerMovement(targetUUID) {
+    const playerRef = ref(database, `parties/${PARTY_CODE}/game/players/${targetUUID}`);
 
     onValue(playerRef, (snapshot) => {
         if (snapshot.exists()) {
-            renderPlayer(partyCode, playerUUID);
+            renderPlayer(targetUUID);
         }
     });
 }
 
 // tile functions
 
-async function collectGo(partyCode, playerUUID) {
+async function collectGo() {
     const reward = 200;
 
-    const bankRef = ref(database, `parties/${partyCode}/game/bank`);
-    const playerRef = ref(database, `parties/${partyCode}/game/players/${playerUUID}`);
+    const bankRef = ref(database, `parties/${PARTY_CODE}/game/bank`);
+    const playerRef = ref(database, `parties/${PARTY_CODE}/game/players/${PLAYER_UUID}`);
 
     const [bankSnapshot, playerSnapshot] = await Promise.all([get(bankRef), get(playerRef)]);
 
@@ -288,7 +286,7 @@ async function collectGo(partyCode, playerUUID) {
         update(playerRef, playerUpdates)
     ]);
 
-    console.log(`Player ${playerUUID} collected ₩${reward} for passing GO.`);
+    console.log(`Player ${PLAYER_UUID} collected ₩${reward} for passing GO.`);
     return true;
 }
 
@@ -307,8 +305,8 @@ async function chanceCard() {
     return;
 }
 
-async function goToJail(partyCode, playerUUID) {
-    const playerRef = ref(database, `parties/${partyCode}/game/players/${playerUUID}`);
+async function goToJail() {
+    const playerRef = ref(database, `parties/${PARTY_CODE}/game/players/${PLAYER_UUID}`);
     
     await update(playerRef, {
         position: 10,
@@ -318,8 +316,8 @@ async function goToJail(partyCode, playerUUID) {
     console.log('Successfully sent that motherfucker to jail.')
 }
 
-async function detectProperty(partyCode, property) {
-    const propertyRef = ref(database, `parties/${partyCode}/game/properties/${property}`);
+/*async function detectProperty(PARTY_CODE, property) {
+    const propertyRef = ref(database, `parties/${PARTY_CODE}/game/properties/${property}`);
     const propertySnapshot = await get(propertyRef);
 
     if (!propertySnapshot.exists()) {
@@ -330,13 +328,63 @@ async function detectProperty(partyCode, property) {
     const propertyData = propertySnapshot.val();
 
     if (!propertyData.ownerId) {
-        console.log('No one owns this yet!')
+        showDeedCard(property);
+        console.log('No one owns this yet!', property);
     } else {
         console.log(`This property belongs to ${propertyData.ownerId}!`);
     }
+}*/
+
+export async function listenToDeedCards() {
+    MONOPOLY_BOARD.forEach(tile => {
+        if (tile.type === 'property' || tile.type === 'railroad' || tile.type === 'utility') {
+            const tileElement = document.querySelector(`.space${tile.id}`);
+
+            if (tileElement) {
+                tileElement.addEventListener('click', async () => {
+                    const propertyRef = ref(database, `parties/${PARTY_CODE}/game/properties/${tile.id}`);
+                    const propertySnapshot = await get(propertyRef);
+
+                    let ownerId = null;
+
+                    if (propertySnapshot.exists()) {
+                        const propertyData = propertySnapshot.val();
+                        ownerId = propertyData.ownerId || null;
+                    }
+
+                    showDeedCard(tile.id, ownerId);
+                });
+
+            } else {
+                console.error('Tile not found.')
+            }
+        }
+    });
 }
 
-async function buyProperty() {
+async function showDeedCard(tileId, ownerId) {
+    const gameRef = ref(database, `parties/${PARTY_CODE}/game`);
+    const snapshot = await get(gameRef);
+
+    if (snapshot.exists()) {
+        const gameData = snapshot.val();
+        const currentPlayer = gameData.currentPlayer;
+        const playerPos = gameData.players[PLAYER_UUID]?.position;
+
+        const isYourTurn = (currentPlayer === PLAYER_UUID);
+        const isUnclaimed = !ownerId;
+        const isLandedOnThis = (playerPos === tileId);
+
+        if (isYourTurn && isUnclaimed && !isLandedOnThis) {
+            console.log("Interaction locked: You must decide on the property you landed on.");
+            return;
+        }
+    }
+
+    renderDeedCard(tileId, ownerId, PLAYER_UUID);
+}
+
+async function buyProperty(PLAYER_UUID) {
     // wip
 }
 
@@ -348,11 +396,15 @@ async function developProperty() {
     // wip
 }
 
+async function mortgageProperty() {
+    // wip
+}
+
 // turn functions
 
-export async function rollDiceAndMove(partyCode, playerUUID) {
+export async function rollDiceAndMove() {
     try {
-        const gameRef = ref(database, `parties/${partyCode}/game`);
+        const gameRef = ref(database, `parties/${PARTY_CODE}/game`);
         const snapshot = await get(gameRef);
 
         if (!snapshot.exists()) {
@@ -362,9 +414,9 @@ export async function rollDiceAndMove(partyCode, playerUUID) {
 
         const gameData = snapshot.val();
 
-        if (gameData.currentPlayer !== playerUUID) {
+        if (gameData.currentPlayer !== PLAYER_UUID) {
             console.error('Not your turn.');
-            showTurnMessage(partyCode, playerUUID, true);
+            showTurnMessage(true);
             return null;
         }
 
@@ -386,11 +438,11 @@ export async function rollDiceAndMove(partyCode, playerUUID) {
             'phase': 'moving'
         });
 
-        const playerData = gameData.players[playerUUID];
+        const playerData = gameData.players[PLAYER_UUID];
         const isInJail = playerData.inJail || false;
 
         if (isInJail) {
-            const playerRef = ref(database, `parties/${partyCode}/game/players/${playerUUID}`);
+            const playerRef = ref(database, `parties/${PARTY_CODE}/game/players/${PLAYER_UUID}`);
 
             if (isDoubles) {
                 await update(playerRef, {
@@ -398,35 +450,35 @@ export async function rollDiceAndMove(partyCode, playerUUID) {
                     doublesInARow: 0
                 })
 
-                const moveResult = await movePlayer(partyCode, playerUUID, total);
+                const moveResult = await movePlayer(total);
 
                 console.log('Rolled double; sending you OUT of jail NOW.');
-                await endTurn(partyCode, gameData);
+                await endTurn();
                 return { die1, die2, total, isDoubles, moveResult };
             } else {
                 console.log('No doubles, yo ass is staying in jail.');
-                await endTurn(partyCode, gameData);
+                await endTurn();
                 return { die1, die2, total, isDoubles, moveResult };
             }
         }
 
-        const moveResult = await movePlayer(partyCode, playerUUID, total);
+        const moveResult = await movePlayer(total);
 
         if (isDoubles) {
-            const playerData = gameData.players[playerUUID];
+            const playerData = gameData.players[PLAYER_UUID];
             const doublesCount = (playerData.doublesInARow || 0) + 1
 
             if (doublesCount >= 3) {
                 await goToJail();
-                await endTurn(partyCode, gameData);
+                await endTurn();
             } else {
-                await update(ref(database, `parties/${partyCode}/game/players/${playerUUID}`), {doublesInARow: doublesCount});
+                await update(ref(database, `parties/${PARTY_CODE}/game/players/${PLAYER_UUID}`), {doublesInARow: doublesCount});
                 await update(gameRef, { phase: 'rolling' });
             }
             
         } else {
-            await update(ref(database, `parties/${partyCode}/game/players/${playerUUID}`), {doublesInARow: 0});
-            await endTurn(partyCode, gameData);
+            await update(ref(database, `parties/${PARTY_CODE}/game/players/${PLAYER_UUID}`), {doublesInARow: 0});
+            await endTurn();
         }
 
         return { die1, die2, total, isDoubles, moveResult };
@@ -437,14 +489,20 @@ export async function rollDiceAndMove(partyCode, playerUUID) {
     }
 }
 
-async function endTurn(partyCode, gameData) {
-    const players = Object.entries(gameData.players).sort((a, b) => a[1].turnOrder - b[1].turnOrder);
+export async function endTurn() {
+    const gameRef = ref(database, `parties/${PARTY_CODE}/game`);
+    const snapshot = await get(gameRef)
 
+    if (!snapshot.exists) {
+        console.error('Game not found');
+        return;
+    }
+
+    const gameData = snapshot.val()
+    const players = Object.entries(gameData.players).sort((a, b) => a[1].turnOrder - b[1].turnOrder);
     const currentIndex = players.findIndex(([uuid]) => uuid === gameData.currentPlayer);
     const nextIndex = (currentIndex + 1) % players.length;
     const nextPlayer = players[nextIndex][0];
-
-    const gameRef = ref(database, `parties/${partyCode}/game`);
 
     await update(gameRef, {
         currentPlayer: nextPlayer,
@@ -452,8 +510,6 @@ async function endTurn(partyCode, gameData) {
         phase: 'rolling'
     });
 }
-
-// real time updates and what have you
 
 export function listenToMoneyChanges() {
     const billsRef = ref(database, `parties/${PARTY_CODE}/game/players/${PLAYER_UUID}/money/bills`);
@@ -539,14 +595,14 @@ export function listenToGamePlayers() {
     onValue(playersRef, (snapshot) => {
         if (snapshot.exists()) {
             const playersData = snapshot.val();
-            const playerUUIDs = Object.keys(playersData);
+            const PLAYER_UUIDs = Object.keys(playersData);
 
-            renderPlayersList(playerUUIDs, playersData);
+            renderPlayersList(PLAYER_UUIDs, playersData);
         }
     });
 }
 
-async function renderPlayersList(playerUUIDs, playersData) {
+async function renderPlayersList(PLAYER_UUIDs, playersData) {
     const playerList = document.getElementById('player-list');
 
     if (!playerList) {
@@ -555,47 +611,42 @@ async function renderPlayersList(playerUUIDs, playersData) {
     }
 
     playerList.innerHTML = '';
-    stopAllUsernameListeners();
 
-    playerUUIDs.forEach(uuid => {
+    PLAYER_UUIDs.forEach(uuid => {
         const playerDiv = document.createElement('div');
         playerDiv.className = 'player-list-item';
         playerDiv.dataset.uuid = uuid;
 
-        let playerStatus;
-
-
-
         playerDiv.innerHTML = `
             <div class="player-name-text" id="name-${uuid}">Loading...</div>
-            <div class="player-status-text" id="status-${uuid}">...</div>
+            <div class="player-status-text" id="status-${uuid}">[--status-placeholder--]</div>
         `;
 
         playerList.appendChild(playerDiv);
 
         listenToUsername(uuid, (newUsername) => {
-            const usernameDiv = document.getElementById(`name-${uuid}`);
+            const nameElement = document.getElementById(`name-${uuid}`);
 
-            if (usernameDiv) {
-                usernameDiv.textContent = newUsername;
+            if (nameElement) {
+                nameElement.textContent = newUsername;
             }
         });
     });
 }
 
-export function listenToTurns(partyCode, playerUUID) {
-    const gameRef = ref(database, `parties/${partyCode}/game`);
+export function listenToTurns() {
+    const gameRef = ref(database, `parties/${PARTY_CODE}/game`);
 
     onValue(gameRef, (snapshot) => {
         if (snapshot.exists()) {
             const gameData = snapshot.val();
 
-            showTurnMessage(partyCode, playerUUID);
+            showTurnMessage();
 
             const diceButton = document.getElementById('dice-roller');
 
             if (diceButton) {
-                const isYourTurn = gameData.currentPlayer === playerUUID;
+                const isYourTurn = gameData.currentPlayer === PLAYER_UUID;
                 const canRoll = isYourTurn && gameData.phase === 'rolling';
 
                 diceButton.disabled = !canRoll;
@@ -606,18 +657,18 @@ export function listenToTurns(partyCode, playerUUID) {
 
 let activeTurnListenerUUID = null;
 
-export async function showTurnMessage(partyCode, playerUUID, notYourTurn = false) {
+export async function showTurnMessage(notYourTurn = false) { //REWORK THIS
     const turnMessageEl = document.querySelector('.turn-message');
     if (!turnMessageEl) return;
     
     try {
-        const gameRef = ref(database, `parties/${partyCode}/game`);
+        const gameRef = ref(database, `parties/${PARTY_CODE}/game`);
         const snapshot = await get(gameRef);
         
         if (!snapshot.exists()) return;
         
         const gameState = snapshot.val();
-        const currentPlayerUUID = gameState.currentPlayer;
+        const currentPLAYER_UUID = gameState.currentPlayer;
         
         if (notYourTurn) {
             turnMessageEl.textContent = "It's not your turn.";
@@ -625,21 +676,21 @@ export async function showTurnMessage(partyCode, playerUUID, notYourTurn = false
             turnMessageEl.style.color = 'white';
             
             setTimeout(() => {
-                showTurnMessage(partyCode, playerUUD);
+                showTurnMessage(PARTY_CODE, playerUUD);
             }, 3000);
 
             return;
         }
         
-        activeTurnListenerUUID = currentPlayerUUID;
+        activeTurnListenerUUID = currentPLAYER_UUID;
 
-        if (currentPlayerUUID === playerUUID) {
+        if (currentPLAYER_UUID === PLAYER_UUID) {
             turnMessageEl.textContent = "It's your turn!";
             turnMessageEl.style.backgroundColor = 'rgb(10, 173, 10)';
             turnMessageEl.style.color = 'white';
         } else {
-            listenToUsername(currentPlayerUUID, (newUsername) => {
-                if (activeTurnListenerUUID === currentPlayerUUID) { 
+            listenToUsername(currentPLAYER_UUID, (newUsername) => {
+                if (activeTurnListenerUUID === currentPLAYER_UUID) { 
                     turnMessageEl.textContent = `It's ${newUsername}'s turn.`;
                     turnMessageEl.style.backgroundColor = 'rgba(248, 246, 123, 1)';
                     turnMessageEl.style.color = 'black';

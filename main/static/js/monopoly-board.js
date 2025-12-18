@@ -9,7 +9,12 @@ export const BUILDING_COSTS = {
     darkblue: 200,
 };
 
+import { database } from './firebase-config.js';
+import { getDatabase, ref, onValue, set, get, update, remove } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+import { listenToUsername } from './auth.js';
 import { MONOPOLY_BOARD } from "./game-functions.js";
+
+import { PARTY_CODE, PLAYER_UUID } from './game.js';
 
 const PROPERTY_TILE = `
     <div class="tile [--tile-space--] property [--tile-rotation--]">
@@ -17,7 +22,7 @@ const PROPERTY_TILE = `
             <!-- Player tokens will be dynamically added here -->
         </div>
         <div class="tile-content">
-            <div class="color-bar" style="background-color: [--tile-color--];"></div>
+            <div class="color-bar [--tile-color--]-group"></div>
         
             <div class="property-content">
                 <div class="text tile-name">[--tile-name--]</div>
@@ -190,10 +195,6 @@ export function buildMonopolyBoard() {
     boardContainer.innerHTML = boardHTML;
 }
 
-const PROPERTY_DEED = `
-    Oi
-`;
-
 const RAILROAD_DEED = `
     Oi    
 `;
@@ -202,7 +203,52 @@ const UTILITY_DEED = `
     Oi
 `;
 
-export function renderDeed(property) {
+const PROPERTY_DEED = `
+    <div class="property-bar [--tile-color--]-group">
+        [--tile-name--]
+    </div>
+    <div class="rent-list">
+        <div class="rent-labels">
+            <div class="deed-label-text rentLabel">Rent</div>
+            <div class="deed-label-text rentLabel">Rent with color set</div>
+            <div class="deed-label-text rentLabel">Rent with 1h</div>
+            <div class="deed-label-text rentLabel">Rent with 2h</div>
+            <div class="deed-label-text rentLabel">Rent with 3h</div>
+            <div class="deed-label-text rentLabel">Rent with 4h</div>
+            <div class="deed-label-text rentLabel">Rent with hotel</div>
+        </div>
+        <div class="rent-costs">
+            <div class="deed-label-text rentcost">[--rent-base--]</div>
+            <div class="deed-label-text rentcost">[--rent-color-set--]</div>
+            <div class="deed-label-text rentcost">[--rent-1-house--]</div>
+            <div class="deed-label-text rentcost">[--rent-2-house--]</div>
+            <div class="deed-label-text rentcost">[--rent-3-house--]</div>
+            <div class="deed-label-text rentcost">[--rent-4-house--]</div>
+            <div class="deed-label-text rentcost">[--rent-hotel--]</div>
+        </div>
+    </div>
+    <div class="develop">
+        <div class="building-type">
+            <div class="deed-label-text buildingLabel">Houses cost</div>
+            <div class="deed-label-text buildingLabel">Hotels cost</div>
+        </div>
+        <div class="building-cost">
+            <div class="deed-label-text buildingCost">[--house-cost--] each</div>
+            <div class="deed-label-text buildingCost">[--hotel-cost--] each</div>
+            <div class="plus-four-houses">(plus 4 houses)</div>
+        </div>
+    </div>
+`;
+
+export async function renderDeedCard(property, ownerId, PLAYER_UUID) {
+    const deedContent = document.getElementById('deed-content');
+    const tile = MONOPOLY_BOARD[property]
+
+    if (!deedContent) {
+        console.error('Deed content element not found.');
+        return;
+    }
+
     let template;
 
     switch (tile.type) {
@@ -214,5 +260,55 @@ export function renderDeed(property) {
             break;
         default:
             template = PROPERTY_DEED;
+    }
+
+    if (tile.type === 'property') {
+        const houseCost = tile.price * 0.5;
+        const hotelCost = tile.price * 0.5
+        
+        template = template
+            .replace('[--tile-color--]', tile.group)
+            .replace('[--tile-name--]', tile.name)
+            .replace('[--rent-base--]', `₩${tile.rent[0]}`)
+            .replace('[--rent-color-set--]', `₩${tile.rent[1]}`)
+            .replace('[--rent-1-house--]', `₩${tile.rent[2]}`)
+            .replace('[--rent-2-house--]', `₩${tile.rent[3]}`)
+            .replace('[--rent-3-house--]', `₩${tile.rent[4]}`)
+            .replace('[--rent-4-house--]', `₩${tile.rent[5]}`)
+            .replace('[--rent-hotel--]', `₩${tile.rent[6]}`)
+            .replace('[--house-cost--]', `₩${houseCost}`)
+            .replace('[--hotel-cost--]', `₩${hotelCost}`);
+        
+        deedContent.innerHTML = template;
+
+    } else {
+        deedContent.innerHTML = template;
+    }
+
+    const ownedBtns = document.getElementById('if-owned')
+    const unownedBtns = document.getElementById('if-unowned')
+    const deedHeader = document.getElementById('deed-header')
+
+    const deedMenu = document.getElementById('deed-menu');
+    deedMenu.classList.remove('hidden');
+
+    if (!ownerId) { // unclaimed
+        ownedBtns.classList.add('hidden');
+        unownedBtns.classList.remove('hidden');
+        deedHeader.textContent = 'This property is unclaimed!'
+        console.log('Unclaimed!')
+    } else if (ownerId === PLAYER_UUID) { // you own it
+        ownedBtns.classList.remove('hidden');
+        unownedBtns.classList.add('hidden');
+        deedHeader.textContent = 'This property belongs to you!'
+        console.log('Owned!')
+    } else { // someone else owns it
+        ownedBtns.classList.add('hidden');
+        unownedBtns.classList.add('hidden');
+
+        listenToUsername(ownerId, (newUsername) => {
+            deedHeader.textContent = `This property belongs to ${newUsername}!`
+        });
+        console.log('Claimed!')
     }
 }

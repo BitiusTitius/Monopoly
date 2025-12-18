@@ -1,7 +1,7 @@
 // will serve as the main JS file for the game page
 
 import { getDatabase, ref, onValue, set, get, update, remove } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
-import { buildMonopolyBoard } from './monopoly-board.js';
+import { buildMonopolyBoard, renderDeedCard } from './monopoly-board.js';
 import { database } from './firebase-config.js';
 
 import { 
@@ -13,7 +13,9 @@ import {
     listenToMoneyChanges,
     listenToGamePlayers,
     listenToTurns,
-    MONOPOLY_BOARD
+    listenToDeedCards,
+    MONOPOLY_BOARD,
+    endTurn
 } from './game-functions.js';
 
 export const PARTY_CODE = window.PARTY_CODE;
@@ -79,6 +81,7 @@ function initializePropertyState() {
             properties[tile.id] = {
                 propertName: tile.name.toUpperCase().replace(/\s/g, '_'),
                 ownerId: null,
+                rentValues: tile.rent,
                 houses: 0,
                 hotels: 0,
                 mortgaged: false
@@ -140,10 +143,10 @@ async function loadInitialGameState() {
 
     if (snapshot.exists()) {
         const gameData = snapshot.val();
-        await initializePlayerPieces(PARTY_CODE, gameData.players);
+        await initializePlayerPieces(gameData.players);
 
         Object.keys(gameData.players).forEach(playerUUID => {
-            listenToPlayerMovement(PARTY_CODE, playerUUID);
+            listenToPlayerMovement(playerUUID);
         });
     }
 }
@@ -153,20 +156,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     buildMonopolyBoard();
     listenToGamePlayers();
     listenToMoneyChanges();
-
-    listenToTurns(PARTY_CODE, PLAYER_UUID);
+    listenToTurns();
+    listenToDeedCards(PARTY_CODE, PLAYER_UUID);
 
     await loadInitialGameState();
 
     const rollDiceBtn = document.getElementById('dice-roller');
+
     if (rollDiceBtn) {
         rollDiceBtn.addEventListener('click', async () => {
-            await rollDiceAndMove(PARTY_CODE, PLAYER_UUID);
+            await rollDiceAndMove();
         });
     }
 
     const leaveGameBtn = document.getElementById('leave-the-game');
+
     if (leaveGameBtn) {
         leaveGameBtn.addEventListener('click', leaveParty);
+    }
+
+
+
+    const purchaseBtn = document.getElementById('purchase-btn')
+
+    if (purchaseBtn) {
+        purchaseBtn.addEventListener('click', async () => {
+            await endTurn();
+        });
     }
 });

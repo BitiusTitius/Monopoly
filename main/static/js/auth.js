@@ -76,7 +76,6 @@ export async function setUsername() {
         }
 
         PLAYER.username = formattedName;
-        clearUsernameCache(PLAYER_UUID);
 
     } catch (error) {
         showMessage('Could not set username.', 0, 4);
@@ -85,21 +84,17 @@ export async function setUsername() {
 }
 
 export async function getUsernameByUUID(uuid) {
-    if (usernameCache[uuid]) {
-        return usernameCache[uuid];
-    }
-
     try {
         const userRef = ref(database, `users/${uuid}`);
         const snapshot = await get(userRef);
 
         if (snapshot.exists()) {
             const username = snapshot.val().username;
-            usernameCache[uuid] = username;
             return username;
         } else {
             return 'Unknown User';
         }
+
     } catch (error) {
         console.error('Error fetching username:', error);
         return 'Unknown User';

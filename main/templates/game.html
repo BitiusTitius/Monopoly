@@ -14,13 +14,22 @@
 </head>
 <body>
     <div class="appear-above">
-        <div class="deed-card">
-            <div class="deed-content">
-                <!--For property-->
-                <div class="property-bar">
-                    Test, I love you Makima!!!
+        <div class="deed-menu hidden" id="deed-menu">
+            <div class="deed-header" id="deed-header">PLACEHOLDER</div>
+            <div class="deed-card">
+                <div class="deed-content" id="deed-content">
+                    <!--will show here-->
                 </div>
-                <!--For railroad and utility-->
+            </div>
+            <div class="deed-action-btns">
+                <div class="if-unowned hidden" id="if-unowned">
+                    <button class="purchase-btn" id="purchase-btn">Purchase</button>
+                    <button class="auction-btn" id="auction-btn">Auction</button>
+                </div>
+                <div class="if-owned hidden" id="if-owned">
+                    <button class="mortgage-btn" id="mortgage-btn">Mortgage</button>
+                    <button class="trade-btn" id="trade-btn">Trade</button>
+                </div>
             </div>
         </div>
     </div>
@@ -62,29 +71,36 @@
                     </div>
                 </div>
                 <div class="property-information right-ui">
-                    <h2>Your posessions</h2>
+                    <div class="posessions-header header2">Your posesssions</div>
                     <div class="property-list" id="property-list">
+                        Property, yo!!
                         <!-- Property items will be rendered here -->
                     </div>
+                    <div class="property-totals header2" id="property-totals">67 properties</div>
                 </div>
                 <div class="trade-menu right-ui">
                     <!--trading between players-->
-                    <h2>Trade</h2>
+                    <div class="trade-header header2">Trade</div>
                     <div class="give-receive-container">
                         <div class="to-give">
-
+                            Wow!
                         </div>
                         <div class="to-receive">
-
+                            Yo!
                         </div>
                     </div>
-                    <div class="trade-action-buttons">
-                        <button id="propose-trade-btn">Propose Trade</button>
+                    <div class="trade-action-buttons"> <!--propose trade-->
+                        <button id="send-trade-btn">Propose trade</button>
                         <button id="cancel-trade-btn">Cancel</button>
                     </div>
-                    <!--paying rent-->
-                    <button id="leave-the-game">Leave</button>
+                    <div class="rent-action-buttons hidden"> <!--paying rent-->
+                        <button class="send-rent-btn hidden" id="send-rent-btn">Pay rent</button>
+                    </div>
+                    <div class="bank-action-buttons hidden"> <!--paying tax-->
+                        <button class="send-bank-btn hidden" id="send-bank-btn">Pay the bank</button>
+                    </div>
                 </div>
+                <button id="leave-the-game">Leave</button>
             </div>
         </div>
     </div>

@@ -2,9 +2,16 @@
     --standard-gap: 10px;
     --standard-height: 35px;
     --standard-border-radius: 17.5px;
-    --deedWidth: 20vh;
-    --deedHeight: calc((var(--deedWidth) * 244) / 157)
 }
+
+.brown-group { background-color: #955235; }
+.lightblue-group { background-color: #aae0fa; }
+.pink-group { background-color: #d93a96 }
+.orange-group { background-color: #f7941d; }
+.red-group { background-color: #f7941d; }
+.yellow-group { background-color: #fef200; }
+.green-group { background-color: #1fb25a; }
+.darkblue-group { background-color: #0072bb; }
 
 body {
     margin: 0;
@@ -15,24 +22,16 @@ body {
     min-height: 100vh;
     overflow: hidden;
     font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-    background-color: rgb(172, 172, 172);
+    background-color: rgb(192, 118, 57);
 }
 
 .appear-above {
     position: absolute;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 100%;
-    height: 100%;
     z-index: 2;
-    pointer-events: none;
 }
 
 .appear-below {
     position: absolute;
-    width: 100%;
-    height: 100%;
     z-index: 1;
 }
 
@@ -98,7 +97,6 @@ body {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     grid-template-rows: 1fr;
-    background-color: red;
     border-bottom: #000000 0.1vh solid;
 }
 
@@ -552,26 +550,114 @@ body {
 
 /* deed */
 
+.deed-menu {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.deed-heather {
+    height: 20px;
+    font-size: 1em; 
+    line-height: 1.5;
+}
+
 .deed-card {
-    width: var(--deedWidth);
-    height: var(--deedHeight);
-    padding: calc(var(--deedWidth) * (9 / 157));
+    width: 235px;
+    height: 366px;
+    margin: 11px;
     background-color: white;
     display: flex;
-    overflow: hidden;
 }   
 
 .deed-content {
     flex-grow: 1;
     display: flex;
     flex-direction: column;
-    padding: calc(var(--deedWidth) * (5 / 157));
-    border: black 0.3vh solid;
+    margin: 13px;
+    padding: 7px;
+    border: black 2px solid;
+    box-sizing: border-box;
 }
 
 .property-bar {
+    border: black 2px solid;
+    box-sizing: border-box;
+    height: 72px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    font-weight: bold;
+}
+
+.rent-list, .develop {
+    position: relative;
+    display: flex;
+    flex-direction: row;
+}
+
+.rent-list {
+    border-bottom: black 2px solid;
+    box-sizing: border-box;
+    height: 183px;
+    padding-top: 11px;
+    padding-bottom: 11px;
+}
+
+.develop {
+    margin-top: 9px;
+}
+
+.rent-labels, .rent-costs, .building-type, .building-cost {
+    display: flex;
+    flex-direction: column;
     overflow: hidden;
-    background-color: lightblue;
-    border: black 0.3vh solid;
-    height: calc(var(--deedHeight) * (48 / 244))
+    gap: 11px;
+}
+
+.rent-labels, .building-type {
+    position: absolute;
+    left: 0;
+    text-align: left;
+}
+
+.rent-costs, .building-cost {
+    position: absolute;
+    right: 0;
+    text-align: right;
+}
+
+.deed-label-text {
+    height: 13px;
+    font-size: 13px;
+    overflow: hidden;
+}
+
+.plus-four-houses {
+    font-size: 9px;
+}
+
+.deed-action-btns {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+}
+
+.hidden {
+    display: none;
+}
+
+.property-list {
+    height: 100px;
+    background-color: #b6b6b6;
+}
+
+.give-receive-container {
+    display: grid;
+    grid-template-rows: 1fr;
+    grid-template-columns: repeat(2, 1fr);
 }
