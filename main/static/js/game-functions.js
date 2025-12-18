@@ -6,6 +6,8 @@ import { renderDeedCard } from './monopoly-board.js';
 
 import { PARTY_CODE, PLAYER_UUID } from './game.js';
 
+const deedMenu = document.getElementById('deed-menu');
+
 export const MONOPOLY_BOARD = [
     // bottom-end
     { id: 0, name: "GO", type: "corner", group: "start", price: 0 },
@@ -122,7 +124,6 @@ export async function movePlayer(spaces) {
         }
 
         const playerData = snapshot.val();
-
         const isInJail = playerData.inJail || false;
 
         if (isInJail) {
@@ -156,12 +157,15 @@ export async function movePlayer(spaces) {
 
         switch (landedTile.type) {
             case 'property':
+                renderDeedCard(newPosition, newPosition.ownerId, PLAYER_UUID);
                 console.log('You landed on property', newPosition);
                 break;
             case 'railroad':
+                renderDeedCard(newPosition, newPosition.ownerId, PLAYER_UUID);
                 console.log('You landed on property', newPosition);
                 break;
             case 'utility':
+                renderDeedCard(newPosition, newPosition.ownerId, PLAYER_UUID);
                 console.log('You landed on property', newPosition);
                 break;
             case 'card':
@@ -292,16 +296,19 @@ async function collectGo() {
 
 async function getTaxedBozo(amount) {
     console.log(`You have been taxes ${amount}`);
+    await endTurn();
     return;
 }
 
 async function communityChest() {
     console.log('Community Chest executed');
+    await endTurn();
     return;
 }
 
 async function chanceCard() {
     console.log('Chance Card executed');
+    await endTurn();
     return;
 }
 
@@ -315,25 +322,6 @@ async function goToJail() {
 
     console.log('Successfully sent that motherfucker to jail.')
 }
-
-/*async function detectProperty(PARTY_CODE, property) {
-    const propertyRef = ref(database, `parties/${PARTY_CODE}/game/properties/${property}`);
-    const propertySnapshot = await get(propertyRef);
-
-    if (!propertySnapshot.exists()) {
-        console.log('Property not found.');
-        return;
-    }
-
-    const propertyData = propertySnapshot.val();
-
-    if (!propertyData.ownerId) {
-        showDeedCard(property);
-        console.log('No one owns this yet!', property);
-    } else {
-        console.log(`This property belongs to ${propertyData.ownerId}!`);
-    }
-}*/
 
 export async function listenToDeedCards() {
     MONOPOLY_BOARD.forEach(tile => {
@@ -370,12 +358,16 @@ async function showDeedCard(tileId, ownerId) {
         const gameData = snapshot.val();
         const currentPlayer = gameData.currentPlayer;
         const playerPos = gameData.players[PLAYER_UUID]?.position;
+        const moving = gameData.phase === 'moving'
 
         const isYourTurn = (currentPlayer === PLAYER_UUID);
         const isUnclaimed = !ownerId;
         const isLandedOnThis = (playerPos === tileId);
 
-        if (isYourTurn && isUnclaimed && !isLandedOnThis) {
+// if your turn, and the phase is moving, and the tile is unclaimed, and the tile is the
+// tile you landed on
+
+        if (isYourTurn && moving && isUnclaimed && !isLandedOnThis ) {
             console.log("Interaction locked: You must decide on the property you landed on.");
             return;
         }
@@ -384,7 +376,7 @@ async function showDeedCard(tileId, ownerId) {
     renderDeedCard(tileId, ownerId, PLAYER_UUID);
 }
 
-async function buyProperty(PLAYER_UUID) {
+async function buyProperty() {
     // wip
 }
 
@@ -478,7 +470,6 @@ export async function rollDiceAndMove() {
             
         } else {
             await update(ref(database, `parties/${PARTY_CODE}/game/players/${PLAYER_UUID}`), {doublesInARow: 0});
-            await endTurn();
         }
 
         return { die1, die2, total, isDoubles, moveResult };
@@ -492,6 +483,7 @@ export async function rollDiceAndMove() {
 export async function endTurn() {
     const gameRef = ref(database, `parties/${PARTY_CODE}/game`);
     const snapshot = await get(gameRef)
+    deedMenu.classList.add('hidden');
 
     if (!snapshot.exists) {
         console.error('Game not found');
