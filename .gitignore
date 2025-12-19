@@ -1,2 +1,9 @@
 firebase-config.js
 settings.py
+
+__pycache__/
+*.pyc
+venv/
+.env
+db.sqlite3
+staticfiles/
