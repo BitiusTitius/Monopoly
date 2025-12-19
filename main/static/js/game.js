@@ -10,11 +10,12 @@ import {
     initializePlayerPieces,
     listenToPlayerMovement,
     rollDiceAndMove,
-    listenToMoneyChanges,
+    listenToPlayerInventory,
     listenToGamePlayers,
     listenToTurns,
     listenToDeedCards,
     MONOPOLY_BOARD,
+    showDeedCard,
     buyProperty
 } from './game-functions.js';
 
@@ -151,13 +152,15 @@ async function loadInitialGameState() {
     }
 }
 
+const deedMenu = document.getElementById('deed-menu')
+
 document.addEventListener('DOMContentLoaded', async () => {
 
     buildMonopolyBoard();
     listenToGamePlayers();
-    listenToMoneyChanges();
+    listenToPlayerInventory();
     listenToTurns();
-    listenToDeedCards(PARTY_CODE, PLAYER_UUID);
+    listenToDeedCards();
 
     await loadInitialGameState();
 
@@ -175,13 +178,33 @@ document.addEventListener('DOMContentLoaded', async () => {
         leaveGameBtn.addEventListener('click', leaveParty);
     }
 
+    const deedMenuState = localStorage.getItem('deedMenuState');
+    const savedDeedId = localStorage.getItem('deedMenuId');
 
+    if (deedMenuState === 'opened' && savedDeedId !== null) {
+        const gameRef = ref(database, `parties/${PARTY_CODE}/game`);
+        
+        try {
+            const snapshot = await get(gameRef);
+            
+            if (snapshot.exists()) {
+                const gameData = snapshot.val();
+                const ownerId = gameData.properties[savedDeedId]?.ownerId;
+                
+                await showDeedCard(parseInt(savedDeedId), ownerId);
+            } else {
+                localStorage.removeItem('deedMenuState');
+                localStorage.removeItem('deedMenuId');
+                deedMenu.classList.add('hidden');
+            }
 
-    const purchaseBtn = document.getElementById('purchase-btn')
+        } catch (error) {
+            console.error('Error restoring deed card:', error);
+            deedMenu.classList.add('hidden');
+        }
 
-    if (purchaseBtn) {
-        purchaseBtn.addEventListener('click', async () => {
-            await buyProperty();
-        });
+    } else {
+        deedMenu.classList.add('hidden');
     }
+
 });

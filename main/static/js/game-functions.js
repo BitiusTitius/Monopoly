@@ -172,6 +172,7 @@ export async function movePlayer(spaces) {
                     break;
                 } else if (landedTile.name.includes('CHANCE')) {
                     await chanceCard();
+                    break;
                 } else {
                     console.error(`Unknown card type: ${landedTile.name}`);
                 }
@@ -182,6 +183,7 @@ export async function movePlayer(spaces) {
                     break;
                 } else if (landedTile.name.includes('SUPER TAX')) {
                     await getTaxedBozo(200);
+                    break;
                 } else {
                     console.error(`Unknown card type: ${landedTile.name}`);
                 }
@@ -190,6 +192,8 @@ export async function movePlayer(spaces) {
                 if (landedTile.name.includes('GO TO JAIL')) {
                     await goToJail();
                     return { oldPosition, newPosition: 10, passedGo: false };
+                } else {
+                    await endTurn();
                 }
                 break;
             default:
@@ -291,7 +295,7 @@ async function collectGo() {
 }
 
 async function getTaxedBozo(amount) {
-    console.log(`You have been taxes ${amount}`);
+    console.log(`You have been taxed ${amount}`);
     await endTurn();
     return;
 }
@@ -319,6 +323,18 @@ async function goToJail() {
     console.log('Successfully sent that motherfucker to jail.')
 }
 
+async function isMyTurn() {
+    const currentPlayerRef = ref(database, `parties/${PARTY_CODE}/currentPlayer`);
+    const snapshot = await get(currentPlayerRef);
+    const currentPlayer = snapshot.val()
+
+    if (currentPlayer === PLAYER_UUID) {
+        return true;
+    } else {
+        return null;
+    }
+}
+
 export async function listenToDeedCards() {
     MONOPOLY_BOARD.forEach(tile => {
         if (tile.type === 'property' || tile.type === 'railroad' || tile.type === 'utility') {
@@ -334,15 +350,13 @@ export async function listenToDeedCards() {
                         return;
                     }
 
-                    const gameData = snapshot.val()
+                    const gameData = snapshot.val();
 
-                    const currentPlayer = gameData.currentPlayer;
                     const currentPos = gameData.players[PLAYER_UUID]?.position;
                     const isLandedOnThis = currentPos === tile.id;
-                    const isMyTurn = currentPlayer === PLAYER_UUID;
                     const moving = gameData.phase === 'moving';
 
-                    if (isMyTurn && moving && !isLandedOnThis) {
+                    if (isMyTurn() && moving && !isLandedOnThis) {
                         console.log('Interaction locked: please decide on your tile first!');
                         return;
                     }
@@ -354,47 +368,66 @@ export async function listenToDeedCards() {
                 });
 
             } else {
-                console.error('Tile not found.')
+                console.error('Tile not found.');
             }
         }
     });
 }
 
-async function showDeedCard(tileId, ownerId) {
-    deedMenu.classList.remove('hidden');
-    const deedHeader = document.getElementById('deed-header')
+export async function showDeedCard(tileId, ownerId) {
+    localStorage.setItem('deedMenuState', 'opened');
+    localStorage.setItem('deedMenuId', tileId);
+
+    const deedHeader = document.getElementById('deed-header');
 
     if (!ownerId) {
         deedHeader.textContent = 'No one owns this yet!';
-        console.log('Unclaimed.')
+        console.log('Unclaimed.');
     } else if (ownerId === PLAYER_UUID) {
         deedHeader.textContent = 'You own this property!'
-        console.log('Owned.')
+        console.log('Owned.');
     } else {
         listenToUsername(ownerId, (newUsername) => {
             deedHeader.textContent = `This property belongs to ${newUsername}!`
         });
-        console.log('Owned.')
+        console.log('Owned.');
     }
 
     const deedTemplate = await renderDeedCard(tileId);
     const deedContent = document.getElementById('deed-content');
 
     deedContent.innerHTML = deedTemplate;
+
+    if (deedMenu) {
+        deedMenu.classList.remove('hidden');
+    }
 }
 
-export async function buyProperty(tileId) {
-    const purchaseBtn = document.getElementById('purchase-btn');
+export async function buyProperty(tileId, purchaseBtn = document.getElementById('purchase-btn')) {
 
     if (purchaseBtn) {
         purchaseBtn.addEventListener('click', async () => {
-            const buyPropertyResult = await tradeMenuProperty(PLAYER_UUID) // initializes the trade menu for buying property. Returns denominations sent, 
-                                                               // denominations received (in the event of there being change), and property.
-                                                               // also returns 0 for failure, returns 1 for success.
+            const playerRef = ref(database, `parties/${PARTY_CODE}/game/players/${PLAYER_UUID}`);
+            const propertyRef = ref(database, `parties/${PARTY_CODE}/game/properties/${tileId}`);
+
+            const [playerSnapshot, propertySnapshot] = await Promise.all([get(playerRef), get(propertyRef)]);
+
+            const playerData = playerSnapshot.val();
+            const propertyData = propertySnapshot.val();
+
+            if (!playerData || !propertyData) {
+                console.error('Player or bank data not found.');
+                return;
+            }
+
+            await endTurn();
         });
     }
+}
 
-    await endTurn()
+async function rentPropety(tileId) {
+    const rentPropertyResult = await rentPropertyMenu(tileId);
+
 }
 
 async function auctionProperty(tileId) {
@@ -519,25 +552,27 @@ export async function endTurn() {
     });
 }
 
-export function listenToMoneyChanges() {
-    const billsRef = ref(database, `parties/${PARTY_CODE}/game/players/${PLAYER_UUID}/money/bills`);
+export function listenToPlayerInventory() {
+    const gameRef = ref(database, `parties/${PARTY_CODE}/game/`);
+    
     const moneyDisplay = document.getElementById('currency-amount');
-    const listElement = document.querySelector('.denomination-list');
 
-    if (!moneyDisplay || !listElement) {
-        console.error('Money display or denomination list element not found.');
+    const possessionsDisplay = document.getElementById('user-possessions');
+    const propertyElement = document.querySelector('.property-list');
+
+    if (!gameRef) {
+        console.error('Game not found.');
         return;
     }
 
-    if (!billsRef) {
-        console.error('Bills reference is invalid.');
-        return;
-    }
-
-    onValue(billsRef, (snapshot) => {
+    onValue(gameRef, (snapshot) => {
         if (snapshot.exists()) {
-            const billsData = snapshot.val();
-            const totalMoney = calculateTotalMoney(billsData);
+            const gameData = snapshot.val();
+            const playerData = gameData.players[PLAYER_UUID];
+
+            const billsData = playerData?.money.bills;
+            
+            const totalMoney = calculateTotalMoney(billsData); // updating money counter
             const formattedMoney = formatCurrency(totalMoney);
 
             if (moneyDisplay) {
@@ -547,32 +582,19 @@ export function listenToMoneyChanges() {
                 console.error('Money display element not found.');
             }
 
-            renderDenominations(billsData, listElement);
+            const propertiesData = playerData?.propertiesOwned
+
+            renderDenominations(billsData);
+            // renderProperties(propertiesData, propertyElement);
+            // renderToGiveMenu(billsData, propertiesData);
         }
     }, (error) => {
         console.error('Error listening to money changes:', error);
     });
 }
 
-function calculateTotalMoney(bills) {
-    if (!bills) {
-        return 0;
-    }
-
-    let total = 0;
-
-    for (const [denom, count] of Object.entries(bills)) {
-        total += parseInt(denom) * count;
-    }
-
-    return total;
-}
-
-function formatCurrency(amount) {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'KRW', minimumFractionDigits: 0 }).format(amount);
-}
-
-function renderDenominations(bills, container) {
+function renderDenominations(bills) {
+    const container = document.querySelector('.denomination-list');
     container.innerHTML = '';
 
     if (!bills) {
@@ -597,6 +619,24 @@ function renderDenominations(bills, container) {
     });
 }
 
+function calculateTotalMoney(bills) {
+    if (!bills) {
+        return 0;
+    }
+
+    let total = 0;
+
+    for (const [denom, count] of Object.entries(bills)) {
+        total += parseInt(denom) * count;
+    }
+
+    return total;
+}
+
+function formatCurrency(amount) {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'KRW', minimumFractionDigits: 0 }).format(amount);
+}
+
 export function listenToGamePlayers() {
     const playersRef = ref(database, `parties/${PARTY_CODE}/game/players`);
 
@@ -610,7 +650,7 @@ export function listenToGamePlayers() {
     });
 }
 
-async function renderPlayersList(PLAYER_UUIDs, playersData) {
+async function renderPlayersList(PLAYER_UUIDs) {
     const playerList = document.getElementById('player-list');
 
     if (!playerList) {
