@@ -558,7 +558,8 @@ body {
     align-items: center;
 }
 
-.deed-heather {
+.deed-header {
+    font-weight: bold;
     height: 20px;
     font-size: 1em; 
     line-height: 1.5;

@@ -1,7 +1,7 @@
 import { database } from './firebase-config.js';
 import { ref, get, update, onValue } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
 
-import { listenToUsername } from './auth.js';
+import { listenToUsername, PLAYER } from './auth.js';
 import { renderDeedCard } from './monopoly-board.js';
 
 import { PARTY_CODE, PLAYER_UUID } from './game.js';
@@ -68,8 +68,6 @@ const CHARACTER_ICONS = {
     '7': '🐼',
     '8': '🦄'
 };
-
-// player movement and rendering
 
 export async function renderPlayer(targetUUID) {
     try {
@@ -157,15 +155,15 @@ export async function movePlayer(spaces) {
 
         switch (landedTile.type) {
             case 'property':
-                renderDeedCard(newPosition, newPosition.ownerId, PLAYER_UUID);
+                showDeedCard(newPosition);
                 console.log('You landed on property', newPosition);
                 break;
             case 'railroad':
-                renderDeedCard(newPosition, newPosition.ownerId, PLAYER_UUID);
+                showDeedCard(newPosition);
                 console.log('You landed on property', newPosition);
                 break;
             case 'utility':
-                renderDeedCard(newPosition, newPosition.ownerId, PLAYER_UUID);
+                showDeedCard(newPosition);
                 console.log('You landed on property', newPosition);
                 break;
             case 'card':
@@ -228,8 +226,6 @@ export function listenToPlayerMovement(targetUUID) {
         }
     });
 }
-
-// tile functions
 
 async function collectGo() {
     const reward = 200;
@@ -330,17 +326,31 @@ export async function listenToDeedCards() {
 
             if (tileElement) {
                 tileElement.addEventListener('click', async () => {
-                    const propertyRef = ref(database, `parties/${PARTY_CODE}/game/properties/${tile.id}`);
-                    const propertySnapshot = await get(propertyRef);
+                    const gameRef = ref(database, `parties/${PARTY_CODE}/game`);
+                    const snapshot = await get(gameRef);
 
-                    let ownerId = null;
-
-                    if (propertySnapshot.exists()) {
-                        const propertyData = propertySnapshot.val();
-                        ownerId = propertyData.ownerId || null;
+                    if (!snapshot.exists()) {
+                        console.error('Game not found.');
+                        return;
                     }
 
+                    const gameData = snapshot.val()
+
+                    const currentPlayer = gameData.currentPlayer;
+                    const currentPos = gameData.players[PLAYER_UUID]?.position;
+                    const isLandedOnThis = currentPos === tile.id;
+                    const isMyTurn = currentPlayer === PLAYER_UUID;
+                    const moving = gameData.phase === 'moving';
+
+                    if (isMyTurn && moving && !isLandedOnThis) {
+                        console.log('Interaction locked: please decide on your tile first!');
+                        return;
+                    }
+
+                    const ownerId = gameData.properties[tile.id]?.ownerId
+
                     showDeedCard(tile.id, ownerId);
+                    console.log('Showed deed for property', tile.id);
                 });
 
             } else {
@@ -351,44 +361,51 @@ export async function listenToDeedCards() {
 }
 
 async function showDeedCard(tileId, ownerId) {
-    const gameRef = ref(database, `parties/${PARTY_CODE}/game`);
-    const snapshot = await get(gameRef);
+    deedMenu.classList.remove('hidden');
+    const deedHeader = document.getElementById('deed-header')
 
-    if (snapshot.exists()) {
-        const gameData = snapshot.val();
-        const currentPlayer = gameData.currentPlayer;
-        const playerPos = gameData.players[PLAYER_UUID]?.position;
-        const moving = gameData.phase === 'moving'
-
-        const isYourTurn = (currentPlayer === PLAYER_UUID);
-        const isUnclaimed = !ownerId;
-        const isLandedOnThis = (playerPos === tileId);
-
-// if your turn, and the phase is moving, and the tile is unclaimed, and the tile is the
-// tile you landed on
-
-        if (isYourTurn && moving && isUnclaimed && !isLandedOnThis ) {
-            console.log("Interaction locked: You must decide on the property you landed on.");
-            return;
-        }
+    if (!ownerId) {
+        deedHeader.textContent = 'No one owns this yet!';
+        console.log('Unclaimed.')
+    } else if (ownerId === PLAYER_UUID) {
+        deedHeader.textContent = 'You own this property!'
+        console.log('Owned.')
+    } else {
+        listenToUsername(ownerId, (newUsername) => {
+            deedHeader.textContent = `This property belongs to ${newUsername}!`
+        });
+        console.log('Owned.')
     }
 
-    renderDeedCard(tileId, ownerId, PLAYER_UUID);
+    const deedTemplate = await renderDeedCard(tileId);
+    const deedContent = document.getElementById('deed-content');
+
+    deedContent.innerHTML = deedTemplate;
 }
 
-async function buyProperty() {
+export async function buyProperty(tileId) {
+    const purchaseBtn = document.getElementById('purchase-btn');
+
+    if (purchaseBtn) {
+        purchaseBtn.addEventListener('click', async () => {
+            const buyPropertyResult = await tradeMenuProperty(PLAYER_UUID) // initializes the trade menu for buying property. Returns denominations sent, 
+                                                               // denominations received (in the event of there being change), and property.
+                                                               // also returns 0 for failure, returns 1 for success.
+        });
+    }
+
+    await endTurn()
+}
+
+async function auctionProperty(tileId) {
     // wip
 }
 
-async function auctionProperty() {
+async function developProperty(tileId) {
     // wip
 }
 
-async function developProperty() {
-    // wip
-}
-
-async function mortgageProperty() {
+async function mortgageProperty(tileId) {
     // wip
 }
 
@@ -482,8 +499,7 @@ export async function rollDiceAndMove() {
 
 export async function endTurn() {
     const gameRef = ref(database, `parties/${PARTY_CODE}/game`);
-    const snapshot = await get(gameRef)
-    deedMenu.classList.add('hidden');
+    const snapshot = await get(gameRef);
 
     if (!snapshot.exists) {
         console.error('Game not found');

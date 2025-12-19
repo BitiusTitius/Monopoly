@@ -15,7 +15,7 @@ import {
     listenToTurns,
     listenToDeedCards,
     MONOPOLY_BOARD,
-    endTurn
+    buyProperty
 } from './game-functions.js';
 
 export const PARTY_CODE = window.PARTY_CODE;
@@ -181,7 +181,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (purchaseBtn) {
         purchaseBtn.addEventListener('click', async () => {
-            await endTurn();
+            await buyProperty();
         });
     }
 });

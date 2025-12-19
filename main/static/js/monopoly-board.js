@@ -240,15 +240,8 @@ const PROPERTY_DEED = `
     </div>
 `;
 
-export async function renderDeedCard(property, ownerId, PLAYER_UUID) {
-    const deedContent = document.getElementById('deed-content');
+export async function renderDeedCard(property) {
     const tile = MONOPOLY_BOARD[property]
-
-    if (!deedContent) {
-        console.error('Deed content element not found.');
-        return;
-    }
-
     let template;
 
     switch (tile.type) {
@@ -279,36 +272,8 @@ export async function renderDeedCard(property, ownerId, PLAYER_UUID) {
             .replace('[--house-cost--]', `₩${houseCost}`)
             .replace('[--hotel-cost--]', `₩${hotelCost}`);
         
-        deedContent.innerHTML = template;
-
+        return template;
     } else {
-        deedContent.innerHTML = template;
-    }
-
-    const ownedBtns = document.getElementById('if-owned')
-    const unownedBtns = document.getElementById('if-unowned')
-    const deedHeader = document.getElementById('deed-header')
-
-    const deedMenu = document.getElementById('deed-menu');
-    deedMenu.classList.remove('hidden');
-
-    if (!ownerId) { // unclaimed
-        ownedBtns.classList.add('hidden');
-        unownedBtns.classList.remove('hidden');
-        deedHeader.textContent = 'This property is unclaimed!'
-        console.log('Unclaimed!')
-    } else if (ownerId === PLAYER_UUID) { // you own it
-        ownedBtns.classList.remove('hidden');
-        unownedBtns.classList.add('hidden');
-        deedHeader.textContent = 'This property belongs to you!'
-        console.log('Owned!')
-    } else { // someone else owns it
-        ownedBtns.classList.add('hidden');
-        unownedBtns.classList.add('hidden');
-
-        listenToUsername(ownerId, (newUsername) => {
-            deedHeader.textContent = `This property belongs to ${newUsername}!`
-        });
-        console.log('Claimed!')
+        return template;
     }
 }
