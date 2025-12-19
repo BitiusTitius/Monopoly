@@ -155,15 +155,15 @@ export async function movePlayer(spaces) {
 
         switch (landedTile.type) {
             case 'property':
-                showDeedCard(newPosition);
+                detectProperty(newPosition);
                 console.log('You landed on property', newPosition);
                 break;
             case 'railroad':
-                showDeedCard(newPosition);
+                detectProperty(newPosition);
                 console.log('You landed on property', newPosition);
                 break;
             case 'utility':
-                showDeedCard(newPosition);
+                detectProperty(newPosition);
                 console.log('You landed on property', newPosition);
                 break;
             case 'card':
@@ -320,19 +320,8 @@ async function goToJail() {
         inJail: true
     });
 
-    console.log('Successfully sent that motherfucker to jail.')
-}
-
-async function isMyTurn() {
-    const currentPlayerRef = ref(database, `parties/${PARTY_CODE}/currentPlayer`);
-    const snapshot = await get(currentPlayerRef);
-    const currentPlayer = snapshot.val()
-
-    if (currentPlayer === PLAYER_UUID) {
-        return true;
-    } else {
-        return null;
-    }
+    console.log('Successfully sent that motherfucker to jail.');
+    endTurn();
 }
 
 export async function listenToDeedCards() {
@@ -353,10 +342,11 @@ export async function listenToDeedCards() {
                     const gameData = snapshot.val();
 
                     const currentPos = gameData.players[PLAYER_UUID]?.position;
+                    const isMyTurn = gameData.currentPlayer === PLAYER_UUID;
                     const isLandedOnThis = currentPos === tile.id;
                     const moving = gameData.phase === 'moving';
 
-                    if (isMyTurn() && moving && !isLandedOnThis) {
+                    if (isMyTurn && moving && !isLandedOnThis) {
                         console.log('Interaction locked: please decide on your tile first!');
                         return;
                     }
@@ -390,7 +380,7 @@ export async function showDeedCard(tileId, ownerId) {
         listenToUsername(ownerId, (newUsername) => {
             deedHeader.textContent = `This property belongs to ${newUsername}!`
         });
-        console.log('Owned.');
+        console.log('Claimed by another player!');
     }
 
     const deedTemplate = await renderDeedCard(tileId);
@@ -403,31 +393,94 @@ export async function showDeedCard(tileId, ownerId) {
     }
 }
 
-export async function buyProperty(tileId, purchaseBtn = document.getElementById('purchase-btn')) {
+async function detectProperty(tileId) {
+    const propertyRef = ref(database, `parties/${PARTY_CODE}/game/properties/${tileId}`);
+    const propertySnapshot = await get(propertyRef);
 
-    if (purchaseBtn) {
-        purchaseBtn.addEventListener('click', async () => {
-            const playerRef = ref(database, `parties/${PARTY_CODE}/game/players/${PLAYER_UUID}`);
-            const propertyRef = ref(database, `parties/${PARTY_CODE}/game/properties/${tileId}`);
+    if (!propertySnapshot.exists()) {
+        console.error('Property not found.')
+    }
 
-            const [playerSnapshot, propertySnapshot] = await Promise.all([get(playerRef), get(propertyRef)]);
+    const propertyData = propertySnapshot.val();
 
-            const playerData = playerSnapshot.val();
-            const propertyData = propertySnapshot.val();
-
-            if (!playerData || !propertyData) {
-                console.error('Player or bank data not found.');
-                return;
-            }
-
-            await endTurn();
-        });
+    if (!propertyData.ownerId) {
+        await showDeedCard(tileId, propertyData.ownerId);
+        console.log('Unclaimed! You may purchase this,', tileId);
+    } else if (propertyData.ownerId === PLAYER_UUID) {
+        await endTurn();
+        console.log('You own this! No action necessary');
+    } else {
+        await rentProperty(tileId);
+        console.log('You landed on claimed property. Pay the rent.');
     }
 }
 
-async function rentPropety(tileId) {
-    const rentPropertyResult = await rentPropertyMenu(tileId);
+export async function buyProperty() {
+    try {
+        const gameRef = ref(database, `parties/${PARTY_CODE}/game`);
+        const gameSnapshot = await get(gameRef);
+        
+        if (!gameSnapshot.exists()) {
+            console.error('Game not found.')
+        }
 
+        const gameData = gameSnapshot.val();
+        const isMyTurn = gameData.currentPlayer === PLAYER_UUID;
+
+        if (!isMyTurn) {
+            console.log('Wait for your turn first.');
+            return;
+        }
+
+        const moving = gameData.phase === 'moving';
+
+        if (!moving) {
+            console.log('Roll your dice first.');
+            return;
+        }
+
+        const isInjail = gameData.players[PLAYER_UUID]?.inJail || false;
+
+        if (isInjail) {
+            console.log('Cannot buy property if in jail.');
+            return;
+        }
+
+        const tileId = gameData.players[PLAYER_UUID]?.position;
+        const propertyData = gameData.properties[tileId];
+
+        if (!propertyData.ownerId) {
+            const ownedProperties = gameData.players[PLAYER_UUID]?.ownedProperties || [];
+            ownedProperties.push(tileId)
+
+            await update(gameRef, { 
+                [`properties/${tileId}/ownerId`]: PLAYER_UUID,
+                [`players/${PLAYER_UUID}/ownedProperties`]: ownedProperties
+            });
+
+            await endTurn();
+
+            localStorage.setItem('deedMenuState', 'closed');
+            deedMenu.classList.add('hidden');
+            
+            console.log('Purchased!', tileId);
+        } else if (propertyData.ownerId === PLAYER_UUID) {
+            console.log(`Can't purchase - you already own this.`);
+            return;
+        } else {
+            console.log(`Can't purchase - someone else owns it.`);
+        }
+
+    } catch (error) {
+        console.error('Could not buy property.', error);
+        return;
+    }
+}
+
+async function rentProperty(tileId) {
+    console.log('Paid the rent.');
+    await endTurn();
+    return;
 }
 
 async function auctionProperty(tileId) {
@@ -490,17 +543,14 @@ export async function rollDiceAndMove() {
                 await update(playerRef, {
                     inJail: false,
                     doublesInARow: 0
-                })
+                });
 
                 const moveResult = await movePlayer(total);
 
                 console.log('Rolled double; sending you OUT of jail NOW.');
-                await endTurn();
                 return { die1, die2, total, isDoubles, moveResult };
             } else {
-                console.log('No doubles, yo ass is staying in jail.');
-                await endTurn();
-                return { die1, die2, total, isDoubles, moveResult };
+                await endTurn(); // in jail, cannot move
             }
         }
 
@@ -512,7 +562,6 @@ export async function rollDiceAndMove() {
 
             if (doublesCount >= 3) {
                 await goToJail();
-                await endTurn();
             } else {
                 await update(ref(database, `parties/${PARTY_CODE}/game/players/${PLAYER_UUID}`), {doublesInARow: doublesCount});
                 await update(gameRef, { phase: 'rolling' });
@@ -552,27 +601,25 @@ export async function endTurn() {
     });
 }
 
-export function listenToPlayerInventory() {
-    const gameRef = ref(database, `parties/${PARTY_CODE}/game/`);
-    
+export function listenToMoneyChanges() {
+    const billsRef = ref(database, `parties/${PARTY_CODE}/game/players/${PLAYER_UUID}/money/bills`);
     const moneyDisplay = document.getElementById('currency-amount');
+    const listElement = document.querySelector('.denomination-list');
 
-    const possessionsDisplay = document.getElementById('user-possessions');
-    const propertyElement = document.querySelector('.property-list');
-
-    if (!gameRef) {
-        console.error('Game not found.');
+    if (!moneyDisplay || !listElement) {
+        console.error('Money display or denomination list element not found.');
         return;
     }
 
-    onValue(gameRef, (snapshot) => {
-        if (snapshot.exists()) {
-            const gameData = snapshot.val();
-            const playerData = gameData.players[PLAYER_UUID];
+    if (!billsRef) {
+        console.error('Bills reference is invalid.');
+        return;
+    }
 
-            const billsData = playerData?.money.bills;
-            
-            const totalMoney = calculateTotalMoney(billsData); // updating money counter
+    onValue(billsRef, (snapshot) => {
+        if (snapshot.exists()) {
+            const billsData = snapshot.val();
+            const totalMoney = calculateTotalMoney(billsData);
             const formattedMoney = formatCurrency(totalMoney);
 
             if (moneyDisplay) {
@@ -582,11 +629,7 @@ export function listenToPlayerInventory() {
                 console.error('Money display element not found.');
             }
 
-            const propertiesData = playerData?.propertiesOwned
-
-            renderDenominations(billsData);
-            // renderProperties(propertiesData, propertyElement);
-            // renderToGiveMenu(billsData, propertiesData);
+            renderDenominations(billsData, listElement);
         }
     }, (error) => {
         console.error('Error listening to money changes:', error);

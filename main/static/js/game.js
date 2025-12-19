@@ -10,7 +10,7 @@ import {
     initializePlayerPieces,
     listenToPlayerMovement,
     rollDiceAndMove,
-    listenToPlayerInventory,
+    listenToMoneyChanges,
     listenToGamePlayers,
     listenToTurns,
     listenToDeedCards,
@@ -158,7 +158,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     buildMonopolyBoard();
     listenToGamePlayers();
-    listenToPlayerInventory();
+    listenToMoneyChanges();
     listenToTurns();
     listenToDeedCards();
 
@@ -207,4 +207,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         deedMenu.classList.add('hidden');
     }
 
+    const purchaseBtn = document.getElementById('purchase-btn');
+
+    if (purchaseBtn) {
+        purchaseBtn.addEventListener('click', async () => {
+            await buyProperty();
+        });
+    }
 });
