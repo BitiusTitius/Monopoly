@@ -1,7 +1,11 @@
 // will serve as the main JS file for the game page
 
 import { getDatabase, ref, onValue, set, get, update, remove } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
-import { buildMonopolyBoard, renderDeedCard } from './monopoly-board.js';
+import { buildMonopolyBoard, 
+        renderDeedCard,
+        resizeBoard 
+} from './monopoly-board.js';
+
 import { database } from './firebase-config.js';
 
 import { 
@@ -16,7 +20,8 @@ import {
     listenToDeedCards,
     MONOPOLY_BOARD,
     showDeedCard,
-    buyProperty
+    buyProperty,
+    mortgageProperty
 } from './game-functions.js';
 
 export const PARTY_CODE = window.PARTY_CODE;
@@ -156,6 +161,7 @@ const deedMenu = document.getElementById('deed-menu')
 
 document.addEventListener('DOMContentLoaded', async () => {
 
+    resizeBoard();
     buildMonopolyBoard();
     listenToGamePlayers();
     listenToMoneyChanges();
@@ -163,6 +169,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     listenToDeedCards();
 
     await loadInitialGameState();
+
+    window.addEventListener('resize', resizeBoard);
 
     const rollDiceBtn = document.getElementById('dice-roller');
 
@@ -207,11 +215,28 @@ document.addEventListener('DOMContentLoaded', async () => {
         deedMenu.classList.add('hidden');
     }
 
+    const closeDeedMenuBtn = document.getElementById('close-deed-menu');
+
+    if (closeDeedMenuBtn) {
+        closeDeedMenuBtn.addEventListener('click', () => {
+            localStorage.setItem('deedMenuState', 'closed');
+            deedMenu.classList.add('hidden');
+        });
+    }
+
     const purchaseBtn = document.getElementById('purchase-btn');
 
     if (purchaseBtn) {
         purchaseBtn.addEventListener('click', async () => {
             await buyProperty();
+        });
+    }
+
+    const mortgageBtn = document.getElementById('mortgage-btn');
+
+    if (mortgageBtn) {
+        mortgageBtn.addEventListener('click', async () => {
+            await mortgageProperty();
         });
     }
 });

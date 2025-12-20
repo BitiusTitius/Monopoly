@@ -2,6 +2,9 @@
     --standard-gap: 10px;
     --standard-height: 35px;
     --standard-border-radius: 17.5px;
+    --board-size: 980px;
+    --short-side: calc(var(--board-size) * (80 / 980));
+    --long-side: calc(var(--board-size) * (130 / 980));
 }
 
 .brown-group { background-color: #955235; }
@@ -44,9 +47,7 @@ body {
 }
 
 #monopoly-board-container {
-    --board-size: 100vh;
-    --short-side: calc(var(--board-size) * (75 / 915));
-    --long-side: calc(var(--board-size) * (120 / 915));
+    transform-origin: center center;
 
     grid-column: 2;
     grid-row: 1;
@@ -54,8 +55,9 @@ body {
     grid-template-columns: var(--long-side) repeat(9, var(--short-side)) var(--long-side);
     grid-template-rows: var(--long-side) repeat(9, var(--short-side)) var(--long-side);
 
-    width: calc(var(--short-side) * 9 + var(--long-side) * 2);
-    height: calc(var(--short-side) * 9 + var(--long-side) * 2);
+    width: var(--board-size);
+    height: var(--board-size);
+    
     background-color: #cde6d0;
     display: grid;
 }
@@ -64,7 +66,7 @@ body {
 
 .tile, .corner {
     box-sizing: border-box;
-    border: 0.1vh solid #000000;
+    border: 1.25px solid #000000;
     font-family: 'Arial', sans-serif;
     overflow: hidden;
 }
@@ -81,6 +83,7 @@ body {
 }
 
 .tile {
+    transform-origin: center center;
     width: var(--short-side);
     height: var(--long-side);
     background-color: #cde6d0;
@@ -93,11 +96,11 @@ body {
 
 .color-bar {
     width: 100%;
-    height: 24%;
+    height: 23%;
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     grid-template-rows: 1fr;
-    border-bottom: #000000 0.1vh solid;
+    border-bottom: #000000 2.5px solid;
 }
 
 .property-content {
@@ -107,7 +110,7 @@ body {
     align-items: center;
     text-align: center;
     width: 100%;
-    height: 76%;
+    height: 77%;
 }
 
 .non-property-content {
@@ -148,7 +151,6 @@ body {
 }
 
 .left {
-    transform-origin: 50% 50%;
     transform: rotate(90deg) translate(
         calc((var(--short-side) - var(--long-side)) / 2),
         calc((var(--short-side) - var(--long-side)) / 2)
@@ -161,7 +163,6 @@ body {
 }
 
 .top {
-    transform-origin: 50% 50%;
     transform: rotate(180deg);
 }
 
@@ -171,7 +172,6 @@ body {
 }
 
 .right {
-    transform-origin: 50% 50%;
     transform: rotate(270deg) translate(
         calc((var(--long-side) - var(--short-side)) / 2),
         calc((var(--long-side) - var(--short-side)) / 2)

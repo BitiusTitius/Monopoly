@@ -16,6 +16,22 @@ import { MONOPOLY_BOARD } from "./game-functions.js";
 
 import { PARTY_CODE, PLAYER_UUID } from './game.js';
 
+export function resizeBoard() {
+    const board = document.getElementById('monopoly-board-container');
+    const baseSize = 980; // The original size of your board in pixels
+    
+    // 1. Find the available space
+    const availableSpace = Math.min(window.innerWidth, window.innerHeight);
+    
+    // 2. Calculate the scale ratio
+    const scaleFactor = availableSpace / baseSize;
+
+    // 3. Apply the transform
+    // Note: We use scale() and set the transform-origin to top center or center
+    board.style.transform = `scale(${scaleFactor})`;
+    board.style.transformOrigin = 'top center';
+}
+
 const PROPERTY_TILE = `
     <div class="tile [--tile-space--] property [--tile-rotation--]">
         <div class="player-content">
@@ -277,3 +293,9 @@ export async function renderDeedCard(property) {
         return template;
     }
 }
+
+const TRADE_PROPERTY_TEMPLATE = `
+    <div class="property-bar [--tile-color--]-group">
+        [--tile-name--]
+    </div>
+`;

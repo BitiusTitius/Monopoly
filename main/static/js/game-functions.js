@@ -247,7 +247,7 @@ async function collectGo() {
         return;
     }
 
-    const denominations = [100, 50, 20, 10, 5, 1]; // 500 is not included because it is greater than 200 and im too lazy to implement denomination exchange between bank and player
+    const denominations = [100, 50, 20, 10, 5, 1];
 
     let remaining = reward;
     const billsToTake = {};
@@ -370,16 +370,25 @@ export async function showDeedCard(tileId, ownerId) {
 
     const deedHeader = document.getElementById('deed-header');
 
+    const ownedBtns = document.getElementById('if-owned');
+    const unownedBtns = document.getElementById('if-unowned');
+
     if (!ownerId) {
         deedHeader.textContent = 'No one owns this yet!';
+        ownedBtns.classList.add('hidden');
+        unownedBtns.classList.remove('hidden');
         console.log('Unclaimed.');
     } else if (ownerId === PLAYER_UUID) {
         deedHeader.textContent = 'You own this property!'
+        ownedBtns.classList.remove('hidden');
+        unownedBtns.classList.add('hidden');
         console.log('Owned.');
     } else {
         listenToUsername(ownerId, (newUsername) => {
             deedHeader.textContent = `This property belongs to ${newUsername}!`
         });
+        ownedBtns.classList.add('hidden');
+        unownedBtns.classList.add('hidden');
         console.log('Claimed by another player!');
     }
 
@@ -462,7 +471,7 @@ export async function buyProperty() {
 
             localStorage.setItem('deedMenuState', 'closed');
             deedMenu.classList.add('hidden');
-            
+
             console.log('Purchased!', tileId);
         } else if (propertyData.ownerId === PLAYER_UUID) {
             console.log(`Can't purchase - you already own this.`);
@@ -491,8 +500,11 @@ async function developProperty(tileId) {
     // wip
 }
 
-async function mortgageProperty(tileId) {
-    // wip
+export async function mortgageProperty() {
+    const tileId = localStorage.getItem('deedMenuId')
+    console.log('Mortgaged property', tileId)
+    localStorage.setItem('deedMenuState', 'closed');
+    deedMenu.classList.add('hidden');
 }
 
 // turn functions
