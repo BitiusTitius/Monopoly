@@ -26,6 +26,7 @@ import {
 
 import { 
     listenToIncomingTrades, 
+    listenToTheirMoney, 
     listenToTheirProperty, 
     sendTrade 
 } from './trade-functions.js';
@@ -177,6 +178,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (selectedPlayer) {
         listenToTheirProperty(selectedPlayer);
+        listenToTheirMoney(selectedPlayer);
     }
 
     const rollDiceBtn = document.getElementById('dice-roller');

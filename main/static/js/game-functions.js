@@ -5,7 +5,7 @@ import { listenToUsername } from './auth.js';
 import { renderDeedCard } from './monopoly-board.js';
 
 import { PARTY_CODE, PLAYER_UUID } from './game.js';
-import { renderTradeProperty, showPlayerOptions } from './trade-functions.js';
+import { renderTradeMoney, renderTradeProperty, showPlayerOptions } from './trade-functions.js';
 
 import { sendTrade } from './trade-functions.js';
 
@@ -608,6 +608,7 @@ export function listenToMoneyChanges() {
             }
 
             renderDenominations(billsData, listElement);
+            renderTradeMoney(billsData, 'user-inv');
         }
     }, (error) => {
         console.error('Error listening to money changes:', error);

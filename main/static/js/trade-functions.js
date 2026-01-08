@@ -11,6 +11,9 @@ import { renderDeedCard } from './monopoly-board.js';
 const propertiesToGive = JSON.parse(localStorage.getItem('propertiesToGive')) || [];
 const propertiesToReceive = JSON.parse(localStorage.getItem('propertiesToReceive')) || [];
 
+const moneyToGive = JSON.parse(localStorage.getItem('moneyToGive')) || [];
+const moneyToReceive = JSON.parse(localStorage.getItem('moneyToReceive')) || [];
+
 const proposeTradeMenu = document.getElementById('propose-trade');
 const incomingTradeMenu = document.getElementById('incoming-trade')
 
@@ -128,12 +131,45 @@ export async function renderIncomingTrade(tradeId) {
     }
 }
 
+export function renderTradeMoney(playerMoneyData, containerId) {
+    const moneyInv = document.getElementById(containerId);
+
+    if (!playerMoneyData || playerMoneyData.length === 0) {
+        moneyInv.innerHTML = 'lmao u broke as hell'
+    }
+
+    if (!containerId) {
+        console.error('Container ID not found.')
+    }
+
+    const denominations = Object.keys(playerMoneyData).map(Number).sort((a, b) => b - a);
+
+    denominations.forEach(denom => {
+        const count = playerMoneyData[denom] || 0;
+
+        if (count > 0) {
+            const denomItem = document.createElement('button');
+            
+            denomItem.className = 'trade-denom-item';
+            denomItem.innerHTML = `
+                <div class="trade-denom-type">${denom}</div>
+                <div class="trade-denom-count">0/${count}</div>
+            `;
+
+            moneyInv.appendChild(denomItem);
+
+            denomItem.addEventListener('click', () => {
+                console.log('Selected!');
+            });
+        }
+    });
+}
+
 export function renderTradeProperty(ownedPropertiesData, gamePropertiesData, containerId) {
     const userInv = document.getElementById(containerId);
 
     if (!ownedPropertiesData || ownedPropertiesData.length === 0) {
         userInv.innerHTML = "You've nothing in your possessions.";
-        return;
     }
 
     userInv.innerHTML = '';
@@ -205,6 +241,73 @@ export function renderTradeProperty(ownedPropertiesData, gamePropertiesData, con
     });
 }
 
+let currentMoneyListener = null;
+let currentPlayerListener = null;
+
+export async function listenToTheirMoney(selectedValue) {
+    if (currentMoneyListener) {
+        currentMoneyListener();
+        currentMoneyListener = null;
+    }
+
+    const billsRef = ref(database, `parties/${PARTY_CODE}/game/players/${selectedValue}/money/bills`);
+
+    const unsubscribe = onValue(billsRef, (snapshot) => {
+        if (snapshot.exists()) {
+            const billsData = snapshot.val();
+
+            renderTradeMoney(billsData, 'player-inv');
+            console.log('Rendered!')
+        }
+    });
+
+    currentMoneyListener = () => {
+        unsubscribe();
+    }
+}
+
+export async function listenToTheirProperty(selectedValue) {
+    if (currentPlayerListener) {
+        currentPlayerListener();
+        currentPlayerListener = null;
+    }
+
+    const ownedPropertiesRef = ref(database, `parties/${PARTY_CODE}/game/players/${selectedValue}/ownedProperties`);
+    const gamePropertiesRef = ref(database, `parties/${PARTY_CODE}/game/properties`);
+
+    let ownedPropertiesData = null;
+    let gamePropertiesData = null;
+
+    const unsubscribe1 = onValue(ownedPropertiesRef, (snapshot) => {
+        if (snapshot.exists()) {
+            ownedPropertiesData = snapshot.val();
+        } else {
+            ownedPropertiesData = [];
+        }
+
+        if (gamePropertiesData) {
+            console.log('Rendering with both datasets');
+            renderTradeProperty(ownedPropertiesData, gamePropertiesData, 'player-inv');
+        }
+    });
+
+    const unsubscribe2 = onValue(gamePropertiesRef, (snapshot) => {
+        if (snapshot.exists()) {
+            gamePropertiesData = snapshot.val();
+        }
+
+        if (ownedPropertiesData !== null) {
+            console.log('Rendering with both datasets');
+            renderTradeProperty(ownedPropertiesData, gamePropertiesData, 'player-inv');
+        }
+    });
+
+    currentPlayerListener = () => {
+        unsubscribe1();
+        unsubscribe2();
+    };
+}
+
 export let selectedValue = null;
 
 export async function showPlayerOptions(PLAYER_UUIDs) {
@@ -252,58 +355,11 @@ export async function showPlayerOptions(PLAYER_UUIDs) {
         }
 
         localStorage.removeItem('propertiesToReceive');
+        localStorage.removeItem('moneyToReceive');
 
         listenToTheirProperty(selectedValue);
+        listenToTheirMoney(selectedValue);
     });
-}
-
-let currentPlayerListener = null;
-
-export async function listenToTheirProperty(selectedValue) {
-    if (currentPlayerListener) {
-        currentPlayerListener();
-        currentPlayerListener = null;
-    }
-
-    if (!selectedValue || selectedValue === PLAYER_UUID) {
-        document.getElementById('player-inv').innerHTML = "Select a player to view their inventory.";
-        return;
-    }
-
-    const ownedPropertiesRef = ref(database, `parties/${PARTY_CODE}/game/players/${selectedValue}/ownedProperties`);
-    const gamePropertiesRef = ref(database, `parties/${PARTY_CODE}/game/properties`);
-
-    let ownedPropertiesData = null;
-    let gamePropertiesData = null;
-
-    const unsubscribe1 = onValue(ownedPropertiesRef, (snapshot) => {
-        if (snapshot.exists()) {
-            ownedPropertiesData = snapshot.val();
-        } else {
-            ownedPropertiesData = [];
-        }
-
-        if (gamePropertiesData) {
-            console.log('Rendering with both datasets');
-            renderTradeProperty(ownedPropertiesData, gamePropertiesData, 'player-inv');
-        }
-    });
-
-    const unsubscribe2 = onValue(gamePropertiesRef, (snapshot) => {
-        if (snapshot.exists()) {
-            gamePropertiesData = snapshot.val();
-        }
-
-        if (ownedPropertiesData !== null) {
-            console.log('Rendering with both datasets');
-            renderTradeProperty(ownedPropertiesData, gamePropertiesData, 'player-inv');
-        }
-    });
-
-    currentPlayerListener = () => {
-        unsubscribe1();
-        unsubscribe2();
-    };
 }
 
 /**        const propertyItem = document.querySelectorAll('.selected');
