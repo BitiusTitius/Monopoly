@@ -1,19 +1,19 @@
 // will serve as the main JS file for the game page
 
 import { getDatabase, ref, onValue, set, get, update, remove } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
-import { buildMonopolyBoard, 
-        renderDeedCard,
-        resizeBoard 
+
+import { 
+    buildMonopolyBoard, 
+    resizeBoard,
+    initializePlayerPieces,
+    listenToPlayerMovement
 } from './monopoly-board.js';
 
 import { database } from './firebase-config.js';
 
 import { 
-    renderPlayer,
-    movePlayer,
-    initializePlayerPieces,
-    listenToPlayerMovement,
     rollDiceAndMove,
+    listenToPropertyChanges,
     listenToMoneyChanges,
     listenToGamePlayers,
     listenToTurns,
@@ -24,12 +24,14 @@ import {
     mortgageProperty
 } from './game-functions.js';
 
+import { 
+    listenToIncomingTrades, 
+    listenToTheirProperty, 
+    sendTrade 
+} from './trade-functions.js';
+
 export const PARTY_CODE = window.PARTY_CODE;
 export const PLAYER_UUID = window.PLAYER_UUID;
-
-// debugging stuff
-
-window.movePlayer = (uuid, spaces) => movePlayer(PARTY_CODE, uuid || PLAYER_UUID, spaces);
 
 // rest of the code
 
@@ -81,13 +83,10 @@ function initializePropertyState() {
     
     MONOPOLY_BOARD.forEach(tile => {
         if (tile.type === 'property' || tile.type === 'railroad' || tile.type === 'utility') {
-            //const safeName = tile.name.toUpperCase().replace(/\s/g, '_');
-            //const newKey = `${tile.id}_${safeName}`;
-
             properties[tile.id] = {
                 propertName: tile.name.toUpperCase().replace(/\s/g, '_'),
                 ownerId: null,
-                rentValues: tile.rent,
+                rentLevel: 0,
                 houses: 0,
                 hotels: 0,
                 mortgaged: false
@@ -164,13 +163,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     resizeBoard();
     buildMonopolyBoard();
     listenToGamePlayers();
+    listenToPropertyChanges();
     listenToMoneyChanges();
     listenToTurns();
     listenToDeedCards();
+    listenToIncomingTrades();
 
     await loadInitialGameState();
 
     window.addEventListener('resize', resizeBoard);
+
+    const selectedPlayer = localStorage.getItem('selectedPlayer');
+
+    if (selectedPlayer) {
+        listenToTheirProperty(selectedPlayer);
+    }
 
     const rollDiceBtn = document.getElementById('dice-roller');
 
@@ -237,6 +244,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (mortgageBtn) {
         mortgageBtn.addEventListener('click', async () => {
             await mortgageProperty();
+        });
+    }
+
+    const sendTradeBtn = document.getElementById('send-trade-btn');
+
+    if (sendTradeBtn) {
+        sendTradeBtn.addEventListener('click', async () => {
+            sendTrade("trade", null, null);
         });
     }
 });

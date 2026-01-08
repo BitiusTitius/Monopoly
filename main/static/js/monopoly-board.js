@@ -1,3 +1,6 @@
+import { database, PLAYER_UUID } from './firebase-config.js';
+import { ref, get, update, onValue } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+
 export const BUILDING_COSTS = {
     brown: 50,
     lightblue: 50,
@@ -9,38 +12,34 @@ export const BUILDING_COSTS = {
     darkblue: 200,
 };
 
-import { database } from './firebase-config.js';
-import { getDatabase, ref, onValue, set, get, update, remove } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
-import { listenToUsername } from './auth.js';
 import { MONOPOLY_BOARD } from "./game-functions.js";
-
-import { PARTY_CODE, PLAYER_UUID } from './game.js';
 
 export function resizeBoard() {
     const board = document.getElementById('monopoly-board-container');
-    const baseSize = 980; // The original size of your board in pixels
+    const baseSize = 980;
     
-    // 1. Find the available space
-    const availableSpace = Math.min(window.innerWidth, window.innerHeight);
+    const availableSpace = window.innerHeight;
     
-    // 2. Calculate the scale ratio
     const scaleFactor = availableSpace / baseSize;
 
-    // 3. Apply the transform
-    // Note: We use scale() and set the transform-origin to top center or center
     board.style.transform = `scale(${scaleFactor})`;
     board.style.transformOrigin = 'top center';
+
+    const root = document.documentElement;
+    const rescaledSize = scaleFactor * baseSize;
+
+    root.style.setProperty('--resized-board-size', `${rescaledSize}px`);
 }
 
 const PROPERTY_TILE = `
-    <div class="tile [--tile-space--] property [--tile-rotation--]">
+    <div class="tile [--tile-space--] property [--tile-rotation--] align-center">
         <div class="player-content">
             <!-- Player tokens will be dynamically added here -->
         </div>
         <div class="tile-content">
             <div class="color-bar [--tile-color--]-group"></div>
         
-            <div class="property-content">
+            <div class="property-content align-center">
                 <div class="text tile-name">[--tile-name--]</div>
                 <div class="text tile-price">₩[--tile-price--]</div>
             </div>
@@ -49,16 +48,13 @@ const PROPERTY_TILE = `
 `;
 
 const RAILROAD_TILE = `
-    <div class="tile [--tile-space--] railroad [--tile-rotation--]">
+    <div class="tile [--tile-space--] railroad [--tile-rotation--] align-center">
         <div class="player-content">
             <!-- Player tokens will be dynamically added here -->
         </div>
         <div class="tile-content">
-            <div class="non-property-content">
+            <div class="non-property-content align-center">
                 <div class="text tile-name">[--tile-name--]</div>
-                    <svg>
-                        <rect x="50%" y="50%" width="2vh" height="2vh" fill="red"/>
-                    </svg>
                 <div class="text tile-price">₩[--tile-price--]</div>
             </div>
         </div>
@@ -66,16 +62,13 @@ const RAILROAD_TILE = `
 `;
 
 const UTILITY_TILE = `
-    <div class="tile [--tile-space--] utility [--tile-rotation--]">
+    <div class="tile [--tile-space--] utility [--tile-rotation--] align-center">
         <div class="player-content">
             <!-- Player tokens will be dynamically added here -->
         </div>
         <div class="tile-content">
-            <div class="non-property-content">
+            <div class="non-property-content align-center">
                 <div class="text tile-name">[--tile-name--]</div>
-                <svg>
-                    <rect x="50%" y="50%" width="2vh" height="2vh" fill="red"/>
-                </svg>
                 <div class="text tile-price">₩[--tile-price--]</div>
             </div>
         </div>
@@ -83,32 +76,26 @@ const UTILITY_TILE = `
 `;
 
 const CARD_TILE = `
-    <div class="tile [--tile-space--] utility [--tile-rotation--]">
+    <div class="tile [--tile-space--] utility [--tile-rotation--] align-center">
         <div class="player-content">
             <!-- Player tokens will be dynamically added here -->
         </div>
         <div class="tile-content">
-            <div class="non-property-content">
+            <div class="non-property-content align-center">
                 <div class="text tile-name">[--tile-name--]</div>
-                <svg>
-                    <rect x="50%" y="50%" width="2vh" height="2vh" fill="red"/>
-                </svg>
             </div>
         </div>
     </div>
 `;
 
 const TAX_TILE = `
-    <div class="tile [--tile-space--] tax [--tile-rotation--]">
+    <div class="tile [--tile-space--] tax [--tile-rotation--] align-center">
         <div class="player-content">
             <!-- Player tokens will be dynamically added here -->
         </div>
         <div class="tile-content">
-            <div class="non-property-content">
+            <div class="non-property-content align-center">
                 <div class="text tax-label">[--tile-name--]</div>
-                <svg>
-                    <rect x="50%" y="50%" width="2vh" height="2vh" fill="red"/>
-                </svg>
                 <div class="text tile-price">₩[--tile-price--]</div>
             </div>
         </div>
@@ -116,16 +103,13 @@ const TAX_TILE = `
 `;
 
 const CORNER_TILE = `
-    <div class="corner [--tile-space--]">
+    <div class="corner [--tile-space--] align-center">
         <div class="player-content">
             <!-- Player tokens will be dynamically added here -->
         </div>
         <div class="tile-content">
-            <div class="non-property-content">
+            <div class="non-property-content align-center">
                 <div class="text tile-name">[--tile-name--]</div>
-                <svg>
-                    <rect x="50%" y="50%" width="2vh" height="2vh" fill="red"/>
-                </svg>
             </div>
         </div>
     </div>
@@ -197,6 +181,7 @@ function renderTile(tile) {
 
 export function buildMonopolyBoard() {
     const boardContainer = document.getElementById("monopoly-board-container");
+    
     if (!boardContainer) {
         console.error('Board container element with id "monopoly-board-container" not found.');
         return;
@@ -220,7 +205,7 @@ const UTILITY_DEED = `
 `;
 
 const PROPERTY_DEED = `
-    <div class="property-bar [--tile-color--]-group">
+    <div class="property-bar align-center [--tile-color--]-group">
         [--tile-name--]
     </div>
     <div class="rent-list">
@@ -294,8 +279,77 @@ export async function renderDeedCard(property) {
     }
 }
 
-const TRADE_PROPERTY_TEMPLATE = `
-    <div class="property-bar [--tile-color--]-group">
-        [--tile-name--]
-    </div>
-`;
+const CHARACTER_ICONS = {
+    '1': '🐶',
+    '2': '🐱',
+    '3': '🐰',
+    '4': '🦊',
+    '5': '🐸',
+    '6': '🐵',
+    '7': '🐼',
+    '8': '🦄'
+};
+
+export async function renderPlayer(targetUUID) {
+    try {
+        const playerRef = ref(database, `parties/${PARTY_CODE}/game/players/${targetUUID}`);
+        const snapshot = await get(playerRef);
+
+        if (!snapshot.exists()) {
+            console.error('Player not found in party');
+            return;
+        }
+
+        const playerData = snapshot.val();
+        const { position, character } = playerData;
+        const tileElement = document.querySelector(`.space${position}`);
+
+        if (!tileElement) {
+            console.error('Tile element not found for position:', position);
+            return;
+        }
+
+        document.querySelectorAll(`.player-piece[data-player-id="${targetUUID}"]`).forEach(p => p.remove());
+        
+        const playerPiece = document.createElement('div');
+        
+        playerPiece.className = 'player-piece';
+        playerPiece.dataset.playerId = targetUUID;
+        playerPiece.dataset.character = character;
+        playerPiece.textContent = CHARACTER_ICONS[character] || '❓';
+        playerPiece.title = `Player ${character}`;
+
+        const playerContent = tileElement.querySelector('.player-content');
+
+        if (playerContent) {
+            playerContent.appendChild(playerPiece);
+        } else {
+            console.error('Player content container not found in tile element');
+            tileElement.appendChild(playerPiece);
+        }
+
+    } catch (error) {
+        console.error('Error rendering player:', error);
+    }
+}
+
+export async function initializePlayerPieces(players) {
+    document.querySelectorAll('.player-piece').forEach(p => p.remove());
+
+    const renderPromises = Object.keys(players).map(uuid => renderPlayer(uuid));
+
+    await Promise.all(renderPromises);
+
+    console.log('Initialized all player pieces on the board');
+}
+
+
+export function listenToPlayerMovement(targetUUID) {
+    const playerRef = ref(database, `parties/${PARTY_CODE}/game/players/${targetUUID}`);
+
+    onValue(playerRef, (snapshot) => {
+        if (snapshot.exists()) {
+            renderPlayer(targetUUID);
+        }
+    });
+}

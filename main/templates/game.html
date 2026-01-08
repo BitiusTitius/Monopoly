@@ -14,14 +14,14 @@
 </head>
 <body>
     <div class="appear-above">
-        <div class="deed-menu hidden" id="deed-menu">
+        <div class="deed-menu hidden align-center" id="deed-menu">
             <div class="deed-header" id="deed-header">PLACEHOLDER</div>
             <div class="deed-card">
                 <div class="deed-content" id="deed-content">
                     <!--will show here-->
                 </div>
             </div>
-            <div class="deed-action-btns">
+            <div class="deed-action-btns align-center">
                 <div class="if-unowned hidden" id="if-unowned">
                     <button class="purchase-btn" id="purchase-btn">Purchase</button>
                     <button class="auction-btn" id="auction-btn">Auction</button>
@@ -38,7 +38,7 @@
         <div class="game-menus">
             <div class="left-menu-container" id="left-menu-container">
                 <div class="game-information left-ui">
-                    <div class="party-information header2">
+                    <div class="party-information header2 align-center">
                         {{ party_code }}
                     </div>
                     <div class="player-list" id="player-list">
@@ -60,25 +60,50 @@
             <div class="right-menu-container" id="right-menu-container">
                 <div class="currency-information right-ui">
                     <div class="player-currency" id="player-currency">
-                        <div class="player-currency-text header2">YOU CURRENTLY HAVE:</div>
-                        <div class="currency-amount" id="currency-amount"></div>
-                        <div class="player-currency-text header2">TO YOUR NAME!</div>
+                        <div class="player-currency-text header2 align-center">YOU CURRENTLY HAVE:</div>
+                        <div class="currency-amount align-center" id="currency-amount"></div>
+                        <div class="player-currency-text header2 align-center">TO YOUR NAME!</div>
                     </div>
                     <div class="denomination-information">
-                        <div class="denomination-text">Amount per denomination</div>
+                        <div class="denomination-text align-center">Amount per denomination</div>
                         <div class="denomination-list">
                             <!-- Denomination items will be rendered here -->
                         </div>
                     </div>
                 </div>
                 <div class="trade-menu right-ui">
-                    <div class="trade-header header2">Trade</div>
-                    <div class="give-receive-container">
-                        <div class="to-give" id="to-give">
-                            You've nothing in your posessions.
+                    <div class="trade-header header2 align-center">Trade</div>
+                    <div class="propose-trade trade-container hidden" id="propose-trade">
+                        <div class="propose-trade-headers">
+                            <div class="user-name header2 align-center">You</div>
+                            <select class="player-dropdown-list header2 align-center" id="select-player" name="Choose player">
+                                        
+                            </select>
                         </div>
-                        <div class="to-receive">
-                            They've nothing in their posessions.
+                        <div class="inventories-container">
+                            <div class="user-inv trade-inventory-menu" id="user-inv">
+                                
+                            </div>
+                            <div class="player-inv trade-inventory-menu" id="player-inv">
+                                
+                            </div>
+                        </div>
+                        <button class="send-trade-button rounded-bottom header2 align-center" id="send-trade-btn">Propose trade</button>
+                    </div>
+                    <div class="incoming-trade trade-container" id="incoming-trade">
+                        <div class="incoming-trade-header header2 align-center" id="incoming-trade-header">PLACEHOLDER</div>
+                        <div class="inventories-container">
+                            <div class="user-inv trade-inventory-menu" id="user-inv-incoming">
+                                
+                            </div>
+                            <div class="player-inv trade-inventory-menu" id="player-inv-incoming">
+
+                            </div>
+                        </div>
+                        <button class="confirm-purchase-button rounded-bottom header2 align-center" id="confirm-purchase-btn">Confirm purchase</button>
+                        <div class="trade-action-btns hidden" id="trade-action-btns">
+                            <button class="accept-trade-button rounded-bottom-left header2 align-center" id="accept-trade-btn">Accept</button>
+                            <button class="decline-trade-button rounded-bottom-right header2 align-center" id="decline-trade-btn">Fuck off</button>
                         </div>
                     </div>
                 </div>

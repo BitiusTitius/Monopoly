@@ -1,10 +1,13 @@
 import { database } from './firebase-config.js';
 import { ref, get, update, onValue } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
 
-import { listenToUsername, PLAYER } from './auth.js';
+import { listenToUsername } from './auth.js';
 import { renderDeedCard } from './monopoly-board.js';
 
 import { PARTY_CODE, PLAYER_UUID } from './game.js';
+import { renderTradeProperty, showPlayerOptions } from './trade-functions.js';
+
+import { sendTrade } from './trade-functions.js';
 
 const deedMenu = document.getElementById('deed-menu');
 
@@ -58,59 +61,6 @@ export const MONOPOLY_BOARD = [
     { id: 39, name: "MAYFAIR", type: "property", group: "darkblue", price: 400, rent: [50, 100, 200, 600, 1400, 1700, 2000] }
 ];
 
-const CHARACTER_ICONS = {
-    '1': '🐶',
-    '2': '🐱',
-    '3': '🐰',
-    '4': '🦊',
-    '5': '🐸',
-    '6': '🐵',
-    '7': '🐼',
-    '8': '🦄'
-};
-
-export async function renderPlayer(targetUUID) {
-    try {
-        const playerRef = ref(database, `parties/${PARTY_CODE}/game/players/${targetUUID}`);
-        const snapshot = await get(playerRef);
-
-        if (!snapshot.exists()) {
-            console.error('Player not found in party');
-            return;
-        }
-
-        const playerData = snapshot.val();
-        const { position, character } = playerData;
-        const tileElement = document.querySelector(`.space${position}`);
-
-        if (!tileElement) {
-            console.error('Tile element not found for position:', position);
-            return;
-        }
-
-        document.querySelectorAll(`.player-piece[data-player-id="${targetUUID}"]`).forEach(p => p.remove());
-        
-        const playerPiece = document.createElement('div');
-        playerPiece.className = 'player-piece';
-        playerPiece.dataset.playerId = targetUUID;
-        playerPiece.dataset.character = character;
-        playerPiece.textContent = CHARACTER_ICONS[character] || '❓';
-        playerPiece.title = `Player ${character}`;
-
-        const playerContent = tileElement.querySelector('.player-content');
-
-        if (playerContent) {
-            playerContent.appendChild(playerPiece);
-        } else {
-            console.error('Player content container not found in tile element');
-            tileElement.appendChild(playerPiece);
-        }
-
-    } catch (error) {
-        console.error('Error rendering player:', error);
-    }
-}
-
 export async function movePlayer(spaces) {
     try {
         const playerRef = ref(database, `parties/${PARTY_CODE}/game/players/${PLAYER_UUID}`);
@@ -131,6 +81,20 @@ export async function movePlayer(spaces) {
 
         const oldPosition = playerData.position;
         const newPosition = (oldPosition + spaces) % MONOPOLY_BOARD.length;
+
+        let currentPosition = oldPosition;
+
+        for (let i = 0; i < Math.abs(spaces); i++) {
+            await new Promise(resolve => setTimeout(resolve, 300));
+
+            if (spaces > 0) {
+                currentPosition = (currentPosition + 1) % MONOPOLY_BOARD.length;
+            } else {
+                currentPosition = (currentPosition - 1 + MONOPOLY_BOARD.length) % MONOPOLY_BOARD.length;
+            }
+            
+            await update(playerRef, { position: currentPosition });
+        }
 
         if (newPosition < 0) {
             newPosition += MONOPOLY_BOARD.length;
@@ -208,27 +172,6 @@ export async function movePlayer(spaces) {
         console.error('Error moving player:', error);
         return null;
     }
-}
-
-export async function initializePlayerPieces(players) {
-    document.querySelectorAll('.player-piece').forEach(p => p.remove());
-
-    const renderPromises = Object.keys(players).map(uuid => renderPlayer(uuid));
-
-    await Promise.all(renderPromises);
-
-    console.log('Initialized all player pieces on the board');
-}
-
-
-export function listenToPlayerMovement(targetUUID) {
-    const playerRef = ref(database, `parties/${PARTY_CODE}/game/players/${targetUUID}`);
-
-    onValue(playerRef, (snapshot) => {
-        if (snapshot.exists()) {
-            renderPlayer(targetUUID);
-        }
-    });
 }
 
 async function collectGo() {
@@ -459,20 +402,17 @@ export async function buyProperty() {
         const propertyData = gameData.properties[tileId];
 
         if (!propertyData.ownerId) {
-            const ownedProperties = gameData.players[PLAYER_UUID]?.ownedProperties || [];
-            ownedProperties.push(tileId)
+            const formattedData = {
+                id: tileId,
+                price: MONOPOLY_BOARD[tileId]?.price
+            }
 
-            await update(gameRef, { 
-                [`properties/${tileId}/ownerId`]: PLAYER_UUID,
-                [`players/${PLAYER_UUID}/ownedProperties`]: ownedProperties
-            });
+            sendTrade('buy', formattedData, null);
 
-            await endTurn();
+            await update(gameRef, { phase: 'buying' });
 
             localStorage.setItem('deedMenuState', 'closed');
             deedMenu.classList.add('hidden');
-
-            console.log('Purchased!', tileId);
         } else if (propertyData.ownerId === PLAYER_UUID) {
             console.log(`Can't purchase - you already own this.`);
             return;
@@ -506,8 +446,6 @@ export async function mortgageProperty() {
     localStorage.setItem('deedMenuState', 'closed');
     deedMenu.classList.add('hidden');
 }
-
-// turn functions
 
 export async function rollDiceAndMove() {
     try {
@@ -613,6 +551,34 @@ export async function endTurn() {
     });
 }
 
+export function listenToPropertyChanges() {
+    const ownedPropertiesRef = ref(database, `parties/${PARTY_CODE}/game/players/${PLAYER_UUID}/ownedProperties`);
+    const gamePropertiesRef = ref(database, `parties/${PARTY_CODE}/game/properties`);
+
+    let ownedPropertiesData = null;
+    let gamePropertiesData = null;
+
+    onValue(ownedPropertiesRef, (snapshot) => {
+        if (snapshot.exists()) {
+            ownedPropertiesData = snapshot.val();
+
+            if (gamePropertiesData) {
+                renderTradeProperty(ownedPropertiesData, gamePropertiesData, 'user-inv');
+            }
+        }
+    });
+
+    onValue(gamePropertiesRef, (snapshot) => {
+        if (snapshot.exists()) {
+            gamePropertiesData = snapshot.val();
+
+            if (ownedPropertiesData) {
+                renderTradeProperty(ownedPropertiesData, gamePropertiesData, 'user-inv');
+            }
+        }
+    });
+}
+
 export function listenToMoneyChanges() {
     const billsRef = ref(database, `parties/${PARTY_CODE}/game/players/${PLAYER_UUID}/money/bills`);
     const moneyDisplay = document.getElementById('currency-amount');
@@ -623,16 +589,16 @@ export function listenToMoneyChanges() {
         return;
     }
 
-    if (!billsRef) {
-        console.error('Bills reference is invalid.');
-        return;
-    }
-
     onValue(billsRef, (snapshot) => {
         if (snapshot.exists()) {
             const billsData = snapshot.val();
-            const totalMoney = calculateTotalMoney(billsData);
-            const formattedMoney = formatCurrency(totalMoney);
+            let totalMoney = 0;
+
+            for (const [denom, count] of Object.entries(billsData)) {
+                totalMoney += parseInt(denom) * count;
+            }
+
+            const formattedMoney = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'KRW', minimumFractionDigits: 0 }).format(totalMoney);
 
             if (moneyDisplay) {
                 moneyDisplay.textContent = `${formattedMoney}`;
@@ -674,24 +640,6 @@ function renderDenominations(bills) {
     });
 }
 
-function calculateTotalMoney(bills) {
-    if (!bills) {
-        return 0;
-    }
-
-    let total = 0;
-
-    for (const [denom, count] of Object.entries(bills)) {
-        total += parseInt(denom) * count;
-    }
-
-    return total;
-}
-
-function formatCurrency(amount) {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'KRW', minimumFractionDigits: 0 }).format(amount);
-}
-
 export function listenToGamePlayers() {
     const playersRef = ref(database, `parties/${PARTY_CODE}/game/players`);
 
@@ -701,6 +649,7 @@ export function listenToGamePlayers() {
             const PLAYER_UUIDs = Object.keys(playersData);
 
             renderPlayersList(PLAYER_UUIDs, playersData);
+            showPlayerOptions(PLAYER_UUIDs);
         }
     });
 }
