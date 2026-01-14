@@ -288,6 +288,11 @@ export async function renderIncomingTrade(tradeId) {
 
         const tradeData = tradeSnapshot.val()
 
+        if (tradeData.status !== 'pending') {
+            console.log('no need to show trade menu')
+            return;
+        }
+
         const billsRef = ref(database, `parties/${PARTY_CODE}/game/players/${PLAYER_UUID}/money/bills`);
         const billsSnapshot = await get(billsRef);
 
@@ -406,7 +411,7 @@ export async function renderInventory(ownerId, containerId) {
             const selectedData = selectedProperties.includes(tileId);
 
             return {
-                label: MONOPOLY_BOARD[tileId].name,
+                label: `${MONOPOLY_BOARD[tileId].name} (click)`,
                 tileId: tileId,
                 ownerId: gamePropertiesData[tileId]?.ownerId,
                 isSelectable: true,
@@ -435,7 +440,7 @@ export async function renderInventory(ownerId, containerId) {
             const selectedCount = selectedData ? selectedData.count : 0;
 
             return {
-                label: `₩${denom}: ${selectedCount}/${count}`,
+                label: `₩${denom}: ${selectedCount}/${count} (click)`,
                 denom: denom,
                 maxCount: count,
                 ownerId: ownerId,
@@ -684,7 +689,7 @@ async function convertTradeToTree(tradeData) {
             const propsNode = {
                 label: 'PROPERTIES',
                 children: tradeData.propertiesOffered.map(propId => ({
-                    label: MONOPOLY_BOARD[propId].name
+                    label: `${MONOPOLY_BOARD[propId].name}`
                 }))
             };
             offeredNode.children.push(propsNode);
@@ -721,7 +726,7 @@ async function convertTradeToTree(tradeData) {
             const propsNode = {
                 label: 'PROPERTIES',
                 children: tradeData.propertiesRequested.map(propId => ({
-                    label: MONOPOLY_BOARD[propId].name
+                    label: `${MONOPOLY_BOARD[propId].name}`
                 }))
             };
             requestedNode.children.push(propsNode);

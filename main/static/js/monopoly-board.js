@@ -279,7 +279,7 @@ export async function renderDeedCard(property) {
     }
 }
 
-const CHARACTER_ICONS = {
+export const CHARACTER_ICONS = {
     '1': '🐶',
     '2': '🐱',
     '3': '🐰',

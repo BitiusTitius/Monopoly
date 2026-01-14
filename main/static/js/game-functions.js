@@ -2,7 +2,7 @@ import { database } from './firebase-config.js';
 import { ref, get, update, onValue, runTransaction } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
 
 import { listenToUsername } from './auth.js';
-import { renderDeedCard } from './monopoly-board.js';
+import { CHARACTER_ICONS, renderDeedCard } from './monopoly-board.js';
 
 import { PARTY_CODE, PLAYER_UUID } from './game.js';
 import { showPlayerOptions } from './trade-functions.js';
@@ -220,8 +220,8 @@ export async function detectPosition(position) {
         }
 
         const propertyData = propertySnapshot.val();
-        const unclaimed = !propertyData[landedTileId]?.ownerId;
-        const ownedByMe = propertyData[landedTileId]?.ownerId === PLAYER_UUID;
+        const unclaimed = !propertyData.ownerId;
+        const ownedByMe = propertyData.ownerId === PLAYER_UUID;
 
         if (unclaimed) {
             await update(gameRef, { phase: 'decision' })
@@ -654,12 +654,12 @@ export function listenToGamePlayers() {
             const PLAYER_UUIDs = Object.keys(playersData);
 
             renderPlayersList(PLAYER_UUIDs, playersData);
-            showPlayerOptions(PLAYER_UUIDs);
+            showPlayerOptions(PLAYER_UUIDs, playersData);
         }
     });
 }
 
-async function renderPlayersList(PLAYER_UUIDs) {
+async function renderPlayersList(PLAYER_UUIDs, playersData) {
     const playerList = document.getElementById('player-list');
 
     if (!playerList) {
@@ -671,11 +671,13 @@ async function renderPlayersList(PLAYER_UUIDs) {
 
     PLAYER_UUIDs.forEach(uuid => {
         const playerDiv = document.createElement('div');
+        const character = playersData[uuid].character
         playerDiv.className = 'player-list-item display-row';
         playerDiv.dataset.uuid = uuid;
 
         playerDiv.innerHTML = `
             <div class="player-name-text" id="name-${uuid}">Loading...</div>
+            <div class="player-status-text" id="status-${uuid}">${CHARACTER_ICONS[character]}</div>
         `;
 
         playerList.appendChild(playerDiv);
