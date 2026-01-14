@@ -105,7 +105,7 @@ export function clearUsernameCache(uuid) {
     delete usernameCache[uuid];
 }
 
-export function listenToUsername(uuid, callback) {
+export async function listenToUsername(uuid, callback) {
     const userRef = ref(database, `users/${uuid}/username`);
     
     onValue(userRef, (snapshot) => {
@@ -125,4 +125,15 @@ export function stopAllUsernameListeners() {
     }
 
     Object.keys(activeListeners).forEach(key => delete activeListeners[key]);
+}
+
+export async function getUsername(uuid) {
+    const userRef = ref(database, `users/${uuid}/username`);
+    const snapshot = await get(userRef);
+
+    if (snapshot.exists()) {
+        return snapshot.val();
+    } else {
+        return 'Unknown User';
+    }
 }

@@ -13,22 +13,21 @@ import { database } from './firebase-config.js';
 
 import { 
     rollDiceAndMove,
-    listenToPropertyChanges,
-    listenToMoneyChanges,
     listenToGamePlayers,
     listenToTurns,
     listenToDeedCards,
     MONOPOLY_BOARD,
     showDeedCard,
+    endTurn,
     buyProperty,
-    mortgageProperty
+    listenToInventory,
+    showTurnMessage
 } from './game-functions.js';
 
 import { 
     listenToIncomingTrades, 
-    listenToTheirMoney, 
-    listenToTheirProperty, 
-    sendTrade 
+    listenToTheirInventory, 
+    sendTrade
 } from './trade-functions.js';
 
 export const PARTY_CODE = window.PARTY_CODE;
@@ -87,11 +86,14 @@ function initializePropertyState() {
             properties[tile.id] = {
                 propertName: tile.name.toUpperCase().replace(/\s/g, '_'),
                 ownerId: null,
-                rentLevel: 0,
-                houses: 0,
-                hotels: 0,
                 mortgaged: false
             };
+
+            if (tile.type === 'property') {
+                properties[tile.id].houses = 0;
+                properties[tile.id].hotel = false;
+                properties[tile.id].rentLevel = 0;
+            }
         }
     });
 
@@ -163,13 +165,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     resizeBoard();
     buildMonopolyBoard();
+    listenToInventory();
     listenToGamePlayers();
-    listenToPropertyChanges();
-    listenToMoneyChanges();
     listenToTurns();
     listenToDeedCards();
     listenToIncomingTrades();
-
+    
+    await showTurnMessage();
     await loadInitialGameState();
 
     window.addEventListener('resize', resizeBoard);
@@ -177,8 +179,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const selectedPlayer = localStorage.getItem('selectedPlayer');
 
     if (selectedPlayer) {
-        listenToTheirProperty(selectedPlayer);
-        listenToTheirMoney(selectedPlayer);
+        listenToTheirInventory(selectedPlayer);
     }
 
     const rollDiceBtn = document.getElementById('dice-roller');
@@ -245,7 +246,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (mortgageBtn) {
         mortgageBtn.addEventListener('click', async () => {
-            await mortgageProperty();
+            //await mortgageProperty();
         });
     }
 

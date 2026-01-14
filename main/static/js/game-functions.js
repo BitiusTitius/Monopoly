@@ -1,13 +1,13 @@
 import { database } from './firebase-config.js';
-import { ref, get, update, onValue } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+import { ref, get, update, onValue, runTransaction } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
 
 import { listenToUsername } from './auth.js';
 import { renderDeedCard } from './monopoly-board.js';
 
 import { PARTY_CODE, PLAYER_UUID } from './game.js';
-import { renderTradeMoney, renderTradeProperty, showPlayerOptions } from './trade-functions.js';
+import { showPlayerOptions } from './trade-functions.js';
 
-import { sendTrade } from './trade-functions.js';
+import { renderInventory, sendTrade } from './trade-functions.js';
 
 const deedMenu = document.getElementById('deed-menu');
 
@@ -64,6 +64,7 @@ export const MONOPOLY_BOARD = [
 export async function movePlayer(spaces) {
     try {
         const playerRef = ref(database, `parties/${PARTY_CODE}/game/players/${PLAYER_UUID}`);
+        const gameRef = ref(database, `parties/${PARTY_CODE}/game`)
         const snapshot = await get(playerRef);
 
         if (!snapshot.exists()) {
@@ -80,8 +81,6 @@ export async function movePlayer(spaces) {
         }
 
         const oldPosition = playerData.position;
-        const newPosition = (oldPosition + spaces) % MONOPOLY_BOARD.length;
-
         let currentPosition = oldPosition;
 
         for (let i = 0; i < Math.abs(spaces); i++) {
@@ -94,7 +93,10 @@ export async function movePlayer(spaces) {
             }
             
             await update(playerRef, { position: currentPosition });
+            await update(gameRef, { phase: 'moving' })
         }
+
+        const newPosition = (oldPosition + spaces) % MONOPOLY_BOARD.length;
 
         if (newPosition < 0) {
             newPosition += MONOPOLY_BOARD.length;
@@ -110,67 +112,195 @@ export async function movePlayer(spaces) {
             await collectGo();
         }
 
-        const landedTile = MONOPOLY_BOARD.find(tile => tile.id === newPosition)
-
-        if (!landedTile) {
-            console.error(`Error: Landed on invalid position ID ${newPosition}`);
-            return;
-        }
-
-        switch (landedTile.type) {
-            case 'property':
-                detectProperty(newPosition);
-                console.log('You landed on property', newPosition);
-                break;
-            case 'railroad':
-                detectProperty(newPosition);
-                console.log('You landed on property', newPosition);
-                break;
-            case 'utility':
-                detectProperty(newPosition);
-                console.log('You landed on property', newPosition);
-                break;
-            case 'card':
-                if (landedTile.name.includes('COMMUNITY CHEST')) {
-                    await communityChest();
-                    break;
-                } else if (landedTile.name.includes('CHANCE')) {
-                    await chanceCard();
-                    break;
-                } else {
-                    console.error(`Unknown card type: ${landedTile.name}`);
-                }
-                break;
-            case 'tax':
-                if (landedTile.name.includes('INCOME TAX')) {
-                    await getTaxedBozo(100);
-                    break;
-                } else if (landedTile.name.includes('SUPER TAX')) {
-                    await getTaxedBozo(200);
-                    break;
-                } else {
-                    console.error(`Unknown card type: ${landedTile.name}`);
-                }
-                break;
-            case 'corner':
-                if (landedTile.name.includes('GO TO JAIL')) {
-                    await goToJail();
-                    return { oldPosition, newPosition: 10, passedGo: false };
-                } else {
-                    await endTurn();
-                }
-                break;
-            default:
-                console.log('You have landed on the default tile.');
-                break;
-        }
-
         await update(playerRef, { position: newPosition});
-        return { oldPosition, newPosition, passedGo };
+        await detectPosition(newPosition);
         
     } catch (error) {
         console.error('Error moving player:', error);
-        return null;
+        return;
+    }
+}
+
+export async function rollDiceAndMove() {
+    try {
+        const gameRef = ref(database, `parties/${PARTY_CODE}/game`);
+        const snapshot = await get(gameRef);
+
+        if (!snapshot.exists()) {
+            console.error('Game not found.');
+            return;
+        }
+
+        const gameData = snapshot.val();
+
+        if (gameData.currentPlayer !== PLAYER_UUID) {
+            console.error('Not your turn.');
+            return;
+        }
+
+        if (gameData.phase !== 'rolling') {
+            console.error(`Cannot roll in phase: ${gameData.phase}`);
+            return;
+        }
+
+        const die1 = Math.floor(Math.random() * 6) + 1;
+        const die2 = Math.floor(Math.random() * 6) + 1;
+        const total = die1 + die2;
+        const isDoubles = die1 === die2;
+
+        console.log(`Die 1: ${die1}, die 2: ${die2}, total: ${total}, ${isDoubles ? '(doubles)' : ''}`);
+
+        const playerData = gameData.players[PLAYER_UUID];
+        const isInJail = playerData.inJail || false;
+
+        await update(gameRef, { lastRoll: [die1, die2] });
+
+        if (isInJail) {
+            const playerRef = ref(database, `parties/${PARTY_CODE}/game/players/${PLAYER_UUID}`);
+
+            if (isDoubles) {
+                await update(playerRef, {
+                    inJail: false,
+                    doublesInARow: 0,
+                    rolledDouble: false
+                });
+
+                console.log('Rolled double; sending you OUT of jail NOW.');
+
+                await movePlayer(total);
+                return;
+            } else {
+                await endTurn(); // in jail, cannot move
+                return;
+            }
+        }
+
+        await movePlayer(total);
+
+        const playerRef = ref(database, `parties/${PARTY_CODE}/game/players/${PLAYER_UUID}`)
+
+        if (isDoubles) {
+            const playerData = gameData.players[PLAYER_UUID];
+            const doublesCount = (playerData.doublesInARow || 0) + 1
+
+            if (doublesCount >= 3) {
+                console.log('rolled three doubles in a row, sending to jail now')
+                await goToJail();
+            } else {
+                await update(playerRef, {doublesInARow: doublesCount, rolledDouble: true});
+            }
+        } else {
+            await update(playerRef, {rolledDouble: false});
+        }
+
+    } catch (error) {
+        console.error('Error rolling dice:', error);
+        return;
+    }
+}
+
+export async function detectPosition(position) {
+    const landedTile = MONOPOLY_BOARD.find(tile => tile.id === position);
+
+    if (!landedTile) {
+        console.error(`Error: Landed on invalid position ID ${position}`);
+        return;
+    }
+
+    const gameRef = ref(database, `parties/${PARTY_CODE}/game`);
+
+    if (landedTile.type === 'property' || landedTile.type === 'utility' || landedTile.type === 'railroad') {
+        const landedTileId = landedTile.id
+        const propertyRef = ref(database, `parties/${PARTY_CODE}/game/properties/${landedTileId}`);
+        const propertySnapshot = await get(propertyRef);
+
+        if (!propertySnapshot.exists()) {
+            console.error('Property not found.');
+            return;
+        }
+
+        const propertyData = propertySnapshot.val();
+        const unclaimed = !propertyData[landedTileId]?.ownerId;
+        const ownedByMe = propertyData[landedTileId]?.ownerId === PLAYER_UUID;
+
+        if (unclaimed) {
+            await update(gameRef, { phase: 'decision' })
+            await showDeedCard(landedTileId, propertyData.ownerId);
+            console.log('unclaimed!');
+            return;
+        } else if (ownedByMe) {
+            await endTurn();
+            console.log('you own this');
+            return;
+        } else {
+            await rentProperty(landedTileId);
+            console.log('pay rent on this property');
+            return;
+        }
+    }
+
+    if (landedTile.type === 'card') {
+        await giveCard(landedTile.type);
+        return;
+    }
+
+    if (landedTile.type === 'tax') {
+        await getTaxedBozo(landedTile.cost);
+        console.log('pay the tax');
+        return;
+    }
+
+    if (landedTile.type === 'corner') {
+        if (landedTile.name.includes('GO TO JAIL')) {
+            await endTurn();
+            console.log('going to jail');
+            return;
+        } else {
+            await endTurn();
+            console.log('just a corner, end turn');
+            return;
+        }
+    }
+}
+
+export async function endTurn() {
+   const gameRef = ref(database, `parties/${PARTY_CODE}/game`);
+
+    try {
+        await runTransaction(gameRef, (currentData) => {
+            if (!currentData) return currentData;
+
+            const playersData = currentData.players || {};
+            const currentPlayerId = currentData.currentPlayer;
+            const player = playersData[currentPlayerId];
+
+            let nextPlayer = currentPlayerId;
+
+            // Check if they rolled a double
+            if (player && player.rolledDouble) {
+                console.log('Rolled double; staying on current player.');
+                // Optional: Reset the double flag here so they don't get infinite turns
+                // player.rolledDouble = false; 
+            } else {
+                // Logic to move to the next player
+                console.log('no double; moving to next player')
+                const playerEntries = Object.entries(playersData)
+                    .sort((a, b) => a[1].turnOrder - b[1].turnOrder);
+                
+                const currentIndex = playerEntries.findIndex(([uuid]) => uuid === currentPlayerId);
+                const nextIndex = (currentIndex + 1) % playerEntries.length;
+                nextPlayer = playerEntries[nextIndex][0];
+            }
+
+            // Update the game state
+            currentData.currentPlayer = nextPlayer;
+            currentData.currentTurn = (currentData.currentTurn || 0) + 1;
+            currentData.phase = 'rolling';
+
+            return currentData;
+        });
+    } catch (error) {
+        console.error("Transaction failed: ", error);
     }
 }
 
@@ -237,36 +367,6 @@ async function collectGo() {
     return true;
 }
 
-async function getTaxedBozo(amount) {
-    console.log(`You have been taxed ${amount}`);
-    await endTurn();
-    return;
-}
-
-async function communityChest() {
-    console.log('Community Chest executed');
-    await endTurn();
-    return;
-}
-
-async function chanceCard() {
-    console.log('Chance Card executed');
-    await endTurn();
-    return;
-}
-
-async function goToJail() {
-    const playerRef = ref(database, `parties/${PARTY_CODE}/game/players/${PLAYER_UUID}`);
-    
-    await update(playerRef, {
-        position: 10,
-        inJail: true
-    });
-
-    console.log('Successfully sent that motherfucker to jail.');
-    endTurn();
-}
-
 export async function listenToDeedCards() {
     MONOPOLY_BOARD.forEach(tile => {
         if (tile.type === 'property' || tile.type === 'railroad' || tile.type === 'utility') {
@@ -287,7 +387,7 @@ export async function listenToDeedCards() {
                     const currentPos = gameData.players[PLAYER_UUID]?.position;
                     const isMyTurn = gameData.currentPlayer === PLAYER_UUID;
                     const isLandedOnThis = currentPos === tile.id;
-                    const moving = gameData.phase === 'moving';
+                    const moving = gameData.phase === 'decision';
 
                     if (isMyTurn && moving && !isLandedOnThis) {
                         console.log('Interaction locked: please decide on your tile first!');
@@ -345,28 +445,6 @@ export async function showDeedCard(tileId, ownerId) {
     }
 }
 
-async function detectProperty(tileId) {
-    const propertyRef = ref(database, `parties/${PARTY_CODE}/game/properties/${tileId}`);
-    const propertySnapshot = await get(propertyRef);
-
-    if (!propertySnapshot.exists()) {
-        console.error('Property not found.')
-    }
-
-    const propertyData = propertySnapshot.val();
-
-    if (!propertyData.ownerId) {
-        await showDeedCard(tileId, propertyData.ownerId);
-        console.log('Unclaimed! You may purchase this,', tileId);
-    } else if (propertyData.ownerId === PLAYER_UUID) {
-        await endTurn();
-        console.log('You own this! No action necessary');
-    } else {
-        await rentProperty(tileId);
-        console.log('You landed on claimed property. Pay the rent.');
-    }
-}
-
 export async function buyProperty() {
     try {
         const gameRef = ref(database, `parties/${PARTY_CODE}/game`);
@@ -384,9 +462,9 @@ export async function buyProperty() {
             return;
         }
 
-        const moving = gameData.phase === 'moving';
+        const decision = gameData.phase === 'decision'
 
-        if (!moving) {
+        if (!decision) {
             console.log('Roll your dice first.');
             return;
         }
@@ -427,171 +505,95 @@ export async function buyProperty() {
 }
 
 async function rentProperty(tileId) {
-    console.log('Paid the rent.');
-    await endTurn();
+    try {
+        const gameRef = ref(database, `parties/${PARTY_CODE}/game`);
+        const gameSnapshot = await get(gameRef);
+        
+        if (!gameSnapshot.exists()) {
+            console.error('Game not found.')
+        }
+
+        const gameData = gameSnapshot.val();
+
+        const propertyData = gameData.properties[tileId];
+        const propertyStaticData = MONOPOLY_BOARD[tileId];
+        let rent = 0;
+        
+        if (propertyStaticData && propertyStaticData.rent) {
+            rent = Array.isArray(propertyStaticData.rent)
+                ? propertyStaticData.rent[propertyData.rentLevel]
+                : propertyStaticData.rent;
+        }
+
+        const formattedData = {
+            id: tileId,
+            rent: rent,
+            ownerId: propertyData.ownerId,
+        }
+
+        sendTrade('rent', formattedData, null);
+
+        await update(gameRef, { phase: 'renting' });
+
+    } catch (error) {
+        console.error('Could not rent property.', error);
+        return;
+    }
+}
+
+async function getTaxedBozo(amount) {
+    try {
+        console.log('taxed', amount);
+        await endTurn();
+        /*const gameRef = ref(database, `parties/${PARTY_CODE}/game`);
+
+        sendTrade('tax', null, amount);
+
+        await update(gameRef, { phase: 'taxing' });*/
+    } catch (error) {
+        console.error('Could not tax player.', error);
+        return;
+    }
+}
+
+async function giveCard(type) {
+    console.log('hello');
+    endTurn();
     return;
 }
 
-async function auctionProperty(tileId) {
-    // wip
+async function goToJail() {
+    const playerRef = ref(database, `parties/${PARTY_CODE}/game/players/${PLAYER_UUID}`);
+    
+    await update(playerRef, {
+        position: 10,
+        inJail: true
+    });
+
+    endTurn();
 }
 
-async function developProperty(tileId) {
-    // wip
-}
+let playerInventoryListener = null;
 
-export async function mortgageProperty() {
-    const tileId = localStorage.getItem('deedMenuId')
-    console.log('Mortgaged property', tileId)
-    localStorage.setItem('deedMenuState', 'closed');
-    deedMenu.classList.add('hidden');
-}
-
-export async function rollDiceAndMove() {
-    try {
-        const gameRef = ref(database, `parties/${PARTY_CODE}/game`);
-        const snapshot = await get(gameRef);
-
-        if (!snapshot.exists()) {
-            console.error('Game not found.');
-            return null;
-        }
-
-        const gameData = snapshot.val();
-
-        if (gameData.currentPlayer !== PLAYER_UUID) {
-            console.error('Not your turn.');
-            showTurnMessage(true);
-            return null;
-        }
-
-        if (gameData.phase !== 'rolling') {
-            console.error(`Cannot roll in phase: ${gameData.phase}`);
-            return null;
-        }
-
-        const die1 = Math.floor(Math.random() * 6) + 1;
-        const die2 = Math.floor(Math.random() * 6) + 1;
-        const total = die1 + die2;
-        const isDoubles = die1 === die2;
-
-        console.log(`Die 1: ${die1}, die 2: ${die2}, total: ${total}, ${isDoubles ? '(Doubles!)' : ''}`);
-
-        await update(gameRef, {
-            'lastRoll': { die1, die2, total, isDoubles },
-            'dice': [die1, die2],
-            'phase': 'moving'
-        });
-
-        const playerData = gameData.players[PLAYER_UUID];
-        const isInJail = playerData.inJail || false;
-
-        if (isInJail) {
-            const playerRef = ref(database, `parties/${PARTY_CODE}/game/players/${PLAYER_UUID}`);
-
-            if (isDoubles) {
-                await update(playerRef, {
-                    inJail: false,
-                    doublesInARow: 0
-                });
-
-                const moveResult = await movePlayer(total);
-
-                console.log('Rolled double; sending you OUT of jail NOW.');
-                return { die1, die2, total, isDoubles, moveResult };
-            } else {
-                await endTurn(); // in jail, cannot move
-            }
-        }
-
-        const moveResult = await movePlayer(total);
-
-        if (isDoubles) {
-            const playerData = gameData.players[PLAYER_UUID];
-            const doublesCount = (playerData.doublesInARow || 0) + 1
-
-            if (doublesCount >= 3) {
-                await goToJail();
-            } else {
-                await update(ref(database, `parties/${PARTY_CODE}/game/players/${PLAYER_UUID}`), {doublesInARow: doublesCount});
-                await update(gameRef, { phase: 'rolling' });
-            }
-            
-        } else {
-            await update(ref(database, `parties/${PARTY_CODE}/game/players/${PLAYER_UUID}`), {doublesInARow: 0});
-        }
-
-        return { die1, die2, total, isDoubles, moveResult };
-
-    } catch (error) {
-        console.error('Error rolling dice:', error);
-        return null;
-    }
-}
-
-export async function endTurn() {
-    const gameRef = ref(database, `parties/${PARTY_CODE}/game`);
-    const snapshot = await get(gameRef);
-
-    if (!snapshot.exists) {
-        console.error('Game not found');
-        return;
+export function listenToInventory() {
+    if (playerInventoryListener) {
+        playerInventoryListener();
+        playerInventoryListener = null;
     }
 
-    const gameData = snapshot.val()
-    const players = Object.entries(gameData.players).sort((a, b) => a[1].turnOrder - b[1].turnOrder);
-    const currentIndex = players.findIndex(([uuid]) => uuid === gameData.currentPlayer);
-    const nextIndex = (currentIndex + 1) % players.length;
-    const nextPlayer = players[nextIndex][0];
+    let billsData = null;
 
-    await update(gameRef, {
-        currentPlayer: nextPlayer,
-        currentTurn: gameData.currentTurn + 1,
-        phase: 'rolling'
-    });
-}
+    const playerRef = ref(database, `parties/${PARTY_CODE}/game/players/${PLAYER_UUID}/money`);
 
-export function listenToPropertyChanges() {
-    const ownedPropertiesRef = ref(database, `parties/${PARTY_CODE}/game/players/${PLAYER_UUID}/ownedProperties`);
-    const gamePropertiesRef = ref(database, `parties/${PARTY_CODE}/game/properties`);
-
-    let ownedPropertiesData = null;
-    let gamePropertiesData = null;
-
-    onValue(ownedPropertiesRef, (snapshot) => {
-        if (snapshot.exists()) {
-            ownedPropertiesData = snapshot.val();
-
-            if (gamePropertiesData) {
-                renderTradeProperty(ownedPropertiesData, gamePropertiesData, 'user-inv');
-            }
-        }
-    });
-
-    onValue(gamePropertiesRef, (snapshot) => {
-        if (snapshot.exists()) {
-            gamePropertiesData = snapshot.val();
-
-            if (ownedPropertiesData) {
-                renderTradeProperty(ownedPropertiesData, gamePropertiesData, 'user-inv');
-            }
-        }
-    });
-}
-
-export function listenToMoneyChanges() {
-    const billsRef = ref(database, `parties/${PARTY_CODE}/game/players/${PLAYER_UUID}/money/bills`);
     const moneyDisplay = document.getElementById('currency-amount');
     const listElement = document.querySelector('.denomination-list');
 
-    if (!moneyDisplay || !listElement) {
-        console.error('Money display or denomination list element not found.');
-        return;
-    }
-
-    onValue(billsRef, (snapshot) => {
+    const unsubscribe = onValue(playerRef, (snapshot) => {
         if (snapshot.exists()) {
-            const billsData = snapshot.val();
+            const playerData = snapshot.val();
+
+            billsData = playerData.bills;
+
             let totalMoney = 0;
 
             for (const [denom, count] of Object.entries(billsData)) {
@@ -608,11 +610,13 @@ export function listenToMoneyChanges() {
             }
 
             renderDenominations(billsData, listElement);
-            renderTradeMoney(billsData, 'user-inv');
+            renderInventory(PLAYER_UUID, 'user-inv');
         }
-    }, (error) => {
-        console.error('Error listening to money changes:', error);
     });
+
+    playerInventoryListener = () => {
+        unsubscribe();
+    }
 }
 
 function renderDenominations(bills) {
@@ -667,12 +671,11 @@ async function renderPlayersList(PLAYER_UUIDs) {
 
     PLAYER_UUIDs.forEach(uuid => {
         const playerDiv = document.createElement('div');
-        playerDiv.className = 'player-list-item';
+        playerDiv.className = 'player-list-item display-row';
         playerDiv.dataset.uuid = uuid;
 
         playerDiv.innerHTML = `
             <div class="player-name-text" id="name-${uuid}">Loading...</div>
-            <div class="player-status-text" id="status-${uuid}">[--status-placeholder--]</div>
         `;
 
         playerList.appendChild(playerDiv);
@@ -693,9 +696,6 @@ export function listenToTurns() {
     onValue(gameRef, (snapshot) => {
         if (snapshot.exists()) {
             const gameData = snapshot.val();
-
-            showTurnMessage();
-
             const diceButton = document.getElementById('dice-roller');
 
             if (diceButton) {
@@ -708,50 +708,68 @@ export function listenToTurns() {
     });
 }
 
-let activeTurnListenerUUID = null;
+export async function showTurnMessage() {
+    const gameRef = ref(database, `parties/${PARTY_CODE}/game`);
+    const messageElement = document.getElementById('turn-message');
 
-export async function showTurnMessage(notYourTurn = false) { //REWORK THIS
-    const turnMessageEl = document.querySelector('.turn-message');
-    if (!turnMessageEl) return;
-    
-    try {
-        const gameRef = ref(database, `parties/${PARTY_CODE}/game`);
-        const snapshot = await get(gameRef);
-        
-        if (!snapshot.exists()) return;
-        
-        const gameState = snapshot.val();
-        const currentPLAYER_UUID = gameState.currentPlayer;
-        
-        if (notYourTurn) {
-            turnMessageEl.textContent = "It's not your turn.";
-            turnMessageEl.style.backgroundColor = 'rgba(255, 51, 51, 1)';
-            turnMessageEl.style.color = 'white';
-            
-            setTimeout(() => {
-                showTurnMessage(PARTY_CODE, playerUUD);
-            }, 3000);
-
-            return;
-        }
-        
-        activeTurnListenerUUID = currentPLAYER_UUID;
-
-        if (currentPLAYER_UUID === PLAYER_UUID) {
-            turnMessageEl.textContent = "It's your turn!";
-            turnMessageEl.style.backgroundColor = 'rgb(10, 173, 10)';
-            turnMessageEl.style.color = 'white';
-        } else {
-            listenToUsername(currentPLAYER_UUID, (newUsername) => {
-                if (activeTurnListenerUUID === currentPLAYER_UUID) { 
-                    turnMessageEl.textContent = `It's ${newUsername}'s turn.`;
-                    turnMessageEl.style.backgroundColor = 'rgba(248, 246, 123, 1)';
-                    turnMessageEl.style.color = 'black';
-                }
-            });
-        }
-        
-    } catch (error) {
-        console.error('Error updating turn message:', error);
+    if (!messageElement) {
+        console.error('not found');
+        return;
     }
+
+    onValue(gameRef, (snapshot) => {
+        if (snapshot.exists()) {
+            const gameData = snapshot.val();
+            const phase = gameData.phase;
+            const currentPlayer = gameData.currentPlayer
+            const isMe = currentPlayer === PLAYER_UUID;
+            const lastDiceRoll = gameData.lastRoll || [];
+            const doubles = gameData.players[currentPlayer].rolledDouble || false
+            messageElement.style.color = 'white'
+
+            if (phase === 'rolling') {
+                if (isMe) {
+                    messageElement.textContent = `It's your turn! Roll now!`
+                    messageElement.style.backgroundColor = `#1fb25a`
+                } else {
+                    listenToUsername(currentPlayer, (username) => {
+                        messageElement.textContent = `It's ${username}'s turn!`
+                        messageElement.style.backgroundColor = `#f7941d`
+                    })
+                }
+            }
+
+            if (phase === 'moving') {
+                if (isMe) {
+                    if (doubles) {
+                        messageElement.textContent = `You rolled a double! (${lastDiceRoll[0]} and ${lastDiceRoll[1]})`
+                        messageElement.style.backgroundColor = `#0072bb`
+                    } else {
+                        messageElement.textContent = `You rolled a ${lastDiceRoll[0] + lastDiceRoll[1]}! (${lastDiceRoll[0]} and ${lastDiceRoll[1]})`
+                        messageElement.style.backgroundColor = `#f11c26`
+                    }
+                } else {
+                    listenToUsername(currentPlayer, (username) => {
+                        if (doubles) {
+                            messageElement.textContent = `${username} rolled a double! (${lastDiceRoll[0]} and ${lastDiceRoll[1]})`
+                        } else {
+                            messageElement.textContent = `${username} rolled a ${lastDiceRoll[0] + lastDiceRoll[1]}! (${lastDiceRoll[0]} and ${lastDiceRoll[1]})`
+                        }
+                    })
+                }
+            }
+
+            if (phase === 'decision') {
+                if (isMe) {
+                    messageElement.textContent = `Waiting for your decision...`
+                    messageElement.style.backgroundColor = `#0072bb`
+                } else {
+                    listenToUsername(currentPlayer, (username) => {
+                        messageElement.textContent = `${username} is deciding...`
+                        messageElement.style.backgroundColor = `#f11c26`
+                    })
+                }
+            }
+        }
+    });
 }

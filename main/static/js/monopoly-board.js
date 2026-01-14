@@ -208,8 +208,8 @@ const PROPERTY_DEED = `
     <div class="property-bar align-center [--tile-color--]-group">
         [--tile-name--]
     </div>
-    <div class="rent-list">
-        <div class="rent-labels">
+    <div class="rent-list display-columnn">
+        <div class="rent-labels display-column">
             <div class="deed-label-text rentLabel">Rent</div>
             <div class="deed-label-text rentLabel">Rent with color set</div>
             <div class="deed-label-text rentLabel">Rent with 1h</div>
@@ -218,7 +218,7 @@ const PROPERTY_DEED = `
             <div class="deed-label-text rentLabel">Rent with 4h</div>
             <div class="deed-label-text rentLabel">Rent with hotel</div>
         </div>
-        <div class="rent-costs">
+        <div class="rent-costs display-column">
             <div class="deed-label-text rentcost">[--rent-base--]</div>
             <div class="deed-label-text rentcost">[--rent-color-set--]</div>
             <div class="deed-label-text rentcost">[--rent-1-house--]</div>
@@ -228,12 +228,12 @@ const PROPERTY_DEED = `
             <div class="deed-label-text rentcost">[--rent-hotel--]</div>
         </div>
     </div>
-    <div class="develop">
-        <div class="building-type">
+    <div class="develop display-column">
+        <div class="building-type display-column">
             <div class="deed-label-text buildingLabel">Houses cost</div>
             <div class="deed-label-text buildingLabel">Hotels cost</div>
         </div>
-        <div class="building-cost">
+        <div class="building-cost display-column">
             <div class="deed-label-text buildingCost">[--house-cost--] each</div>
             <div class="deed-label-text buildingCost">[--hotel-cost--] each</div>
             <div class="plus-four-houses">(plus 4 houses)</div>

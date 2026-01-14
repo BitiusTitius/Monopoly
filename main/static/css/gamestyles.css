@@ -25,6 +25,33 @@
     text-align: center;
 }
 
+.display-row {
+    display: flex;
+    flex-direction: row;
+}
+
+.display-column {
+    display: flex;
+    flex-direction: column;
+}
+
+/* BUTTON STYLES */
+
+.rounded-bottom {
+    border-bottom-left-radius: var(--standard-border-radius);
+    border-bottom-right-radius: var(--standard-border-radius);
+}
+
+.inv-list {
+    gap: var(--standard-gap);
+}
+
+.standard-height {
+    height: var(--standard-height);
+    border-radius: var(--standard-height);
+    padding: var(--standard-gap);
+}
+
 body {
     margin: 0;
     padding: 0;
@@ -76,7 +103,6 @@ body {
 
 .tile, .corner {
     box-sizing: border-box;
-    overflow: hidden;
 }
 
 .corner {
@@ -110,13 +136,11 @@ body {
 
 .property-content {
     position: relative;
-    flex-direction: column; 
     height: 77%;
 }
 
 .non-property-content {
     position: relative;
-    flex-direction: column; 
     height: 100%;
 }
 
@@ -429,8 +453,6 @@ body {
     margin: var(--standard-gap);
     grid-column: 1;
     grid-row: 1;
-    display: flex;
-    flex-direction: column;
     gap: var(--standard-gap);
 }
 
@@ -447,8 +469,6 @@ body {
 }
 
 .turn-information {
-    display: flex;
-    flex-direction: row;
     height: var(--standard-height);
     gap: var(--standard-gap);
 }
@@ -460,8 +480,6 @@ body {
 }
 
 .turn-message {
-    display: flex;
-    align-items: center;
     text-wrap: nowrap;
     overflow: hidden;
     background-color: white;
@@ -488,8 +506,6 @@ body {
     margin: var(--standard-gap);
     grid-column: 3;
     grid-row: 1;
-    display: flex;
-    flex-direction: column;
     gap: var(--standard-gap);
 }
 
@@ -525,23 +541,15 @@ body {
 /* player list */
 
 .player-list {
-    display: flex;
-    flex-direction: column;
     gap: var(--standard-gap);
     padding: var(--standard-gap);
     min-width: 0;
-}
-
-.player-list-item {
-    display: flex;
-    flex-direction: row;
 }
 
 /* deed */
 
 .deed-menu {
     position: relative;
-    flex-direction: column;
 }
 
 .deed-header {
@@ -559,8 +567,6 @@ body {
 
 .deed-content {
     flex-grow: 1;
-    display: flex;
-    flex-direction: column;
     margin: 13px;
     padding: 7px;
     border: black 2px solid;
@@ -576,8 +582,6 @@ body {
 
 .rent-list, .develop {
     position: relative;
-    display: flex;
-    flex-direction: row;
 }
 
 .rent-list {
@@ -593,8 +597,6 @@ body {
 }
 
 .rent-labels, .rent-costs, .building-type, .building-cost {
-    display: flex;
-    flex-direction: column;
     overflow: hidden;
     gap: 11px;
 }
@@ -619,11 +621,6 @@ body {
 
 .plus-four-houses {
     font-size: 9px;
-}
-
-.deed-action-btns {
-    display: flex;
-    flex-direction: row;
 }
 
 .hidden {
@@ -660,11 +657,6 @@ body {
     width: 100%;
 }
 
-.trade-container {
-    display: flex;
-    flex-direction: column;
-}
-
 .propose-trade-headers, .inventories-container {
     display: grid;
     grid-template-rows: 1fr;
@@ -674,18 +666,19 @@ body {
 .trade-inventory-menu {
     padding: var(--standard-gap);
     gap: var(--standard-gap);
-    display: flex;
-    flex-direction: column;
     height: 200px;
     overflow-y: auto;
+
+    -ms-overflow-style: none;
+    scrollbar-width: none;
 }
 
 .user-inv {
-    background-color: #555;
+    background-color: #727272;
 }
 
 .player-inv {
-    background-color: #8f8f8f;
+    background-color: #555;
 }
 .user-property-item {
     border: none;
@@ -706,9 +699,30 @@ body {
     opacity: 0.5;
 }
 
-/* BUTTON STYLES */
+.tree {
+    font-family: 'Courier New', monospace;
+    line-height: 1.6;
+    user-select: none;
+    color: white;
+    transform-origin: top left;
+    transform: scale(0.8);
+}
 
-.rounded-bottom {
-    border-bottom-left-radius: var(--standard-border-radius);
-    border-bottom-right-radius: var(--standard-border-radius);
+.tree-node {
+    cursor: pointer;
+    white-space: pre;
+}
+
+.tree-node.collapsed > .tree-children {
+    display: none;
+}
+
+.tree-children {
+    padding-left: 0;
+}
+
+.tree-arrow {
+    display: inline-block;
+    width: 10px;
+    cursor: pointer;
 }
